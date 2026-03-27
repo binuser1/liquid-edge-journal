@@ -1,0 +1,1459 @@
+<!doctype html>
+<html lang="en" class="h-full" data-theme="light">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liquid Edge Trading Journal</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #FDFDFF;
+      --glass-bg: rgba(255,255,255,0.55);
+      --glass-border: rgba(255,255,255,0.75);
+      --text-primary: #12111A;
+      --text-secondary: #5a5775;
+      --accent-cyan: #00C8FF;
+      --accent-violet: #9B5CF5;
+      --accent-green: #00E87A;
+      --accent-crimson: #FF2D55;
+      --sidebar-bg: rgba(255,255,255,0.45);
+      --input-bg: rgba(255,255,255,0.6);
+      --bar-track: rgba(0,0,0,0.07);
+    }
+    [data-theme="dark"] {
+      --bg: #050505;
+      --glass-bg: rgba(18,14,30,0.72);
+      --glass-border: rgba(155,92,245,0.25);
+      --text-primary: #FFFFFF;
+      --text-secondary: #9d97c2;
+      --sidebar-bg: rgba(12,8,22,0.75);
+      --input-bg: rgba(20,14,36,0.7);
+      --bar-track: rgba(255,255,255,0.06);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      color: var(--text-primary);
+      background: var(--bg);
+      transition: background 0.6s ease, color 0.4s ease;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Mesh Background */
+    .mesh-bg {
+      position: fixed; inset: 0; z-index: 0;
+      background: var(--bg);
+    }
+    .mesh-bg::before {
+      content: '';
+      position: absolute; inset: -60%;
+      background:
+        radial-gradient(ellipse 70% 60% at 20% 30%, rgba(0,200,255,0.22) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 70%, rgba(155,92,245,0.20) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 60% 10%, rgba(0,232,122,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 35% at 10% 80%, rgba(255,45,85,0.07) 0%, transparent 55%);
+      animation: meshDrift 18s ease-in-out infinite alternate;
+    }
+    [data-theme="dark"] .mesh-bg::before {
+      background:
+        radial-gradient(ellipse 70% 60% at 20% 30%, rgba(0,200,255,0.14) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 70%, rgba(155,92,245,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 60% 10%, rgba(0,232,122,0.07) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 35% at 10% 80%, rgba(255,45,85,0.06) 0%, transparent 55%);
+    }
+    @keyframes meshDrift {
+      0%   { transform: translate(0%,0%) rotate(0deg) scale(1); }
+      100% { transform: translate(2%,-2%) rotate(2deg) scale(1.02); }
+    }
+
+    .glass {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(22px) saturate(180%);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      border-radius: 22px;
+      transition: background 0.5s, border 0.5s;
+      box-shadow: none;
+    }
+    [data-theme="dark"] .glass {
+      border: 1.5px solid #FFFFFF;
+    }
+
+    .app-shell {
+      position: relative; z-index: 1;
+      display: flex;
+      height: 100%;
+      width: 100%;
+    }
+
+    .sidebar {
+      width: 76px;
+      flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 20px 0;
+      gap: 6px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--glass-border);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      transition: background 0.5s, border 0.5s;
+      z-index: 10;
+    }
+
+    .sidebar-logo {
+      width: 42px; height: 42px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 18px rgba(155,92,245,0.35);
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; color: #fff; font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .nav-folder {
+      width: 52px; height: 52px;
+      border-radius: 16px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+      cursor: pointer;
+      transition: background 0.25s, transform 0.2s, box-shadow 0.25s;
+      position: relative; overflow: hidden;
+      border: none;
+      background: transparent;
+    }
+    .nav-folder span {
+      font-size: 9px; font-weight: 600;
+      color: var(--text-secondary);
+      transition: color 0.25s;
+      letter-spacing: 0.02em;
+    }
+    .nav-folder svg { color: var(--text-secondary); transition: color 0.25s; }
+    .nav-folder.active, .nav-folder:hover {
+      background: linear-gradient(135deg, rgba(0,200,255,0.18), rgba(155,92,245,0.18));
+      box-shadow: 0 4px 16px rgba(155,92,245,0.2);
+      transform: translateY(-1px);
+    }
+    .nav-folder.active svg, .nav-folder:hover svg { color: var(--accent-violet); }
+    .nav-folder.active span, .nav-folder:hover span { color: var(--accent-violet); }
+    .sidebar-spacer { flex: 1; }
+
+    .ripple-circle {
+      position: absolute;
+      border-radius: 50%;
+      transform: scale(0);
+      animation: mercuryRipple 0.7s cubic-bezier(0.22,0.61,0.36,1) forwards;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(0,200,255,0.38) 0%, rgba(155,92,245,0.22) 60%, transparent 100%);
+    }
+    @keyframes mercuryRipple {
+      0%   { transform: scale(0); opacity: 1; }
+      100% { transform: scale(4); opacity: 0; }
+    }
+
+    .main-content {
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex; align-items: center;
+      padding: 16px 24px;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .app-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 18px;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-violet));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      white-space: nowrap;
+    }
+
+    .topbar-spacer { flex: 1; }
+
+    .theme-toggle {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 16px;
+      border-radius: 50px;
+      cursor: pointer;
+      border: 1px solid var(--glass-border);
+      outline: none;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600; font-size: 13px;
+      color: var(--text-primary);
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: all 0.3s ease;
+      box-shadow: none;
+    }
+    .theme-toggle:hover { 
+      border-color: var(--accent-violet);
+      transform: translateY(-1px);
+    }
+
+    .morph-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      animation: morphPulse 2.5s ease-in-out infinite;
+    }
+    @keyframes morphPulse {
+      0%,100% { border-radius: 50%; transform: scale(1); }
+      50% { border-radius: 30% 70% 70% 30%; transform: scale(1.2); }
+    }
+
+    .scroll-area {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+      padding: 0 20px 20px;
+    }
+    .scroll-area::-webkit-scrollbar { width: 4px; }
+    .scroll-area::-webkit-scrollbar-track { background: transparent; }
+    .scroll-area::-webkit-scrollbar-thumb { background: rgba(155,92,245,0.3); border-radius: 2px; }
+
+    .market-scroll {
+      display: flex; gap: 10px;
+      overflow-x: auto; padding: 4px 2px 6px;
+      scrollbar-width: none;
+    }
+    .market-scroll::-webkit-scrollbar { display: none; }
+
+    .market-chip {
+      flex-shrink: 0;
+      padding: 8px 18px;
+      border-radius: 50px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 12px;
+      cursor: pointer;
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      color: var(--text-secondary);
+      transition: all 0.25s ease;
+      backdrop-filter: blur(12px);
+      white-space: nowrap;
+      box-shadow: none;
+    }
+    .market-chip:hover { 
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      transform: translateY(-1px);
+    }
+    .market-chip.selected {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      border-color: transparent;
+      color: #fff;
+      box-shadow: none;
+    }
+
+    .section-label {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 12px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+
+    .checklist-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px;
+      border-radius: 16px;
+      margin-bottom: 8px;
+      background: var(--input-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(10px);
+      transition: background 0.3s, border 0.3s;
+      box-shadow: none;
+    }
+    .checklist-row:hover { border-color: var(--accent-violet); }
+    .checklist-row label {
+      flex: 1;
+      font-size: 14px; font-weight: 500;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .liquid-toggle { position: relative; display: flex; align-items: center; gap: 6px; }
+    .liquid-toggle input[type=checkbox] { display: none; }
+    .liquid-toggle .track {
+      width: 48px; height: 26px;
+      border-radius: 50px;
+      background: var(--bar-track);
+      border: 1.5px solid var(--glass-border);
+      position: relative; cursor: pointer;
+      transition: background 0.4s cubic-bezier(0.22,0.61,0.36,1), border-color 0.3s;
+      overflow: hidden;
+    }
+    .liquid-toggle .track::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green));
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .liquid-toggle input:checked + .track::before { opacity: 1; }
+    .liquid-toggle .thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), border-radius 0.3s;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .liquid-toggle input:checked ~ .thumb {
+      transform: translateX(22px);
+      border-radius: 40% 60% 60% 40%;
+    }
+    .liquid-toggle .toggle-label {
+      font-size: 11px; font-weight: 700;
+      color: var(--text-secondary);
+      min-width: 24px;
+    }
+
+    .drop-zone {
+      border: 2px dashed transparent;
+      border-radius: 22px;
+      min-height: 160px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+    .drop-zone .dz-inner {
+      position: absolute; inset: 2px;
+      border-radius: 20px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+      background: var(--input-bg);
+      backdrop-filter: blur(12px);
+      z-index: 1;
+    }
+    .drop-zone::before {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: 22px;
+      padding: 2px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet), var(--accent-cyan));
+      background-size: 300% 300%;
+      animation: borderFlow 3s linear infinite;
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      z-index: 0;
+    }
+    @keyframes borderFlow {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+    .drop-zone:hover .dz-inner { background: rgba(0,200,255,0.06); }
+    .drop-zone.drag-over .dz-inner { background: rgba(0,200,255,0.12); }
+    .dz-icon { color: var(--accent-cyan); opacity: 0.8; }
+    .dz-text { font-size: 13px; color: var(--text-primary); text-align: center; line-height: 1.5; }
+    .dz-text strong { color: var(--accent-violet); }
+    .dz-preview { max-width: 100%; max-height: 120px; border-radius: 12px; object-fit: cover; }
+
+    .dz-icon-wrap {
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,200,255,0.1);
+      animation: ripplePulse 2.2s cubic-bezier(0.25,0.46,0.45,0.94) infinite;
+    }
+    @keyframes ripplePulse {
+      0%   { box-shadow: 0 0 0 0 rgba(0,200,255,0.4); }
+      70%  { box-shadow: 0 0 0 18px rgba(0,200,255,0); }
+      100% { box-shadow: 0 0 0 0 rgba(0,200,255,0); }
+    }
+
+    .vault-textarea {
+      width: 100%;
+      min-height: 120px;
+      background: var(--input-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 16px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px; line-height: 1.7;
+      color: var(--text-primary);
+      resize: vertical;
+      outline: none;
+      backdrop-filter: blur(12px);
+      transition: border-color 0.3s, background 0.4s;
+      box-shadow: none;
+    }
+    .vault-textarea::placeholder { color: var(--text-secondary); opacity: 0.7; }
+    .vault-textarea:focus { border-color: var(--accent-violet); }
+    .vault-textarea.red-flag { border-color: var(--accent-crimson) !important; }
+
+    .guardian-bar-wrap {
+      flex-shrink: 0;
+      padding: 14px 20px;
+      background: var(--sidebar-bg);
+      border-top: 1px solid var(--glass-border);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      box-shadow: none;
+    }
+    .guardian-label-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .guardian-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 12px; letter-spacing: 0.1em;
+      color: var(--text-secondary);
+    }
+    .guardian-status {
+      font-size: 12px; font-weight: 600;
+      transition: color 0.4s;
+    }
+    .guardian-status.neutral { color: var(--text-secondary); }
+    .guardian-status.safe { color: var(--accent-green); }
+    .guardian-status.danger { color: var(--accent-crimson); }
+    .guardian-track {
+      height: 10px; border-radius: 10px;
+      background: var(--bar-track);
+      border: 1px solid var(--glass-border);
+      overflow: hidden;
+      position: relative;
+      box-shadow: none;
+    }
+    .guardian-fill {
+      height: 100%; border-radius: 10px;
+      width: 0%;
+      transition: width 0.7s cubic-bezier(0.34,1.56,0.64,1), background 0.5s ease;
+      background: linear-gradient(90deg, #888888, #aaaaaa);
+      position: relative;
+      overflow: hidden;
+    }
+    .guardian-fill.safe {
+      background: linear-gradient(90deg, var(--accent-green), #00ffaa);
+    }
+    .guardian-fill.danger {
+      background: linear-gradient(90deg, var(--accent-crimson), #ff6b8a);
+      animation: pulseDanger 1.4s ease-in-out infinite;
+    }
+    @keyframes pulseDanger {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .journal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 680px) {
+      .journal-grid { grid-template-columns: 1fr; }
+      .sidebar { width: 60px; }
+    }
+
+    .card-section { padding: 20px 22px; }
+    .card-section + .card-section { padding-top: 0; }
+
+    .save-btn {
+      width: 100%; padding: 14px;
+      border-radius: 16px;
+      border: none; outline: none; cursor: pointer;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 14px; letter-spacing: 0.04em;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      color: #fff;
+      box-shadow: none;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      position: relative;
+    }
+    .save-btn:hover { 
+      transform: scale(1.02) translateY(-2px);
+    }
+    .save-btn:active { transform: scale(0.98); }
+
+    .red-flag-warn {
+      font-size: 12px; font-weight: 600;
+      color: var(--accent-crimson);
+      margin-top: 8px;
+      display: none;
+      animation: fadeInUp 0.3s ease;
+    }
+    .red-flag-warn.visible { display: block; }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    #fileInput { display: none; }
+
+    .archive-section {
+      margin-top: 24px;
+      padding: 20px 22px;
+    }
+
+    .timeline-nav {
+      display: flex; gap: 8px; align-items: center;
+      margin-bottom: 14px;
+      overflow-x: auto; padding: 2px 0;
+      scrollbar-width: none;
+    }
+    .timeline-nav::-webkit-scrollbar { display: none; }
+    .timeline-month {
+      flex-shrink: 0;
+      padding: 8px 14px;
+      border-radius: 50px;
+      font-size: 12px; font-weight: 600;
+      border: 1px solid var(--glass-border);
+      background: var(--input-bg);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      white-space: nowrap;
+    }
+    .timeline-month:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+    .timeline-month.active {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      border-color: transparent;
+      color: #fff;
+    }
+
+    .view-toggle-group {
+      display: flex; gap: 6px;
+    }
+    .view-toggle {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--glass-border);
+      background: var(--input-bg);
+      font-size: 11px; font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .view-toggle.active {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      border-color: transparent;
+      color: #fff;
+    }
+
+    .filter-pills {
+      display: flex; gap: 8px;
+      margin-bottom: 14px;
+      overflow-x: auto; padding: 2px 0;
+      scrollbar-width: none;
+    }
+    .filter-pills::-webkit-scrollbar { display: none; }
+    .filter-pill {
+      flex-shrink: 0;
+      padding: 8px 14px;
+      border-radius: 50px;
+      font-size: 12px; font-weight: 600;
+      border: 1.5px solid var(--glass-border);
+      background: var(--input-bg);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      white-space: nowrap;
+    }
+    .filter-pill:hover {
+      border-color: var(--accent-violet);
+      color: var(--accent-violet);
+    }
+    .filter-pill.active {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      border-color: transparent;
+      color: #fff;
+    }
+
+    .trade-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      overflow-y: auto;
+      max-height: 480px;
+      padding: 4px 0;
+    }
+    .trade-card {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      border: 1px solid var(--glass-border);
+      background: var(--input-bg);
+      backdrop-filter: blur(10px);
+      aspect-ratio: 1 / 1.2;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    [data-theme="dark"] .trade-card {
+      border: 1.5px solid #FFFFFF;
+    }
+    .trade-card:hover {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: 0 12px 32px rgba(155,92,245,0.25);
+      border-color: var(--accent-violet);
+    }
+
+    .card-chart {
+      flex: 1;
+      background: linear-gradient(135deg, rgba(0,200,255,0.1), rgba(155,92,245,0.1));
+      overflow: hidden;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .card-footer {
+      padding: 10px;
+      background: var(--glass-bg);
+      border-top: 1px solid var(--glass-border);
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .card-market {
+      font-size: 11px; font-weight: 700;
+      color: var(--accent-cyan);
+      letter-spacing: 0.05em;
+    }
+    [data-theme="dark"] .card-market { color: #FFFFFF; }
+    .card-meta {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 10px;
+    }
+    .card-date {
+      color: var(--text-secondary);
+    }
+    [data-theme="dark"] .card-date { color: #FFFFFF; }
+    .card-status {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+    }
+    .card-status.safe { background: rgba(0,232,122,0.2); color: var(--accent-green); }
+    .card-status.danger { background: rgba(255,45,85,0.2); color: var(--accent-crimson); }
+
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      padding: 20px;
+    }
+    .modal-overlay.active { opacity: 1; pointer-events: all; }
+
+    .modal-glass {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(22px);
+      border-radius: 22px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      position: relative;
+      transform: scale(0.9);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    [data-theme="dark"] .modal-glass {
+      border: 1.5px solid #FFFFFF;
+    }
+    .modal-overlay.active .modal-glass {
+      transform: scale(1);
+      opacity: 1;
+    }
+
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--glass-border);
+      background: var(--input-bg);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 101;
+      transition: all 0.25s ease;
+      color: var(--text-primary);
+    }
+    .modal-close:hover { background: rgba(155,92,245,0.2); border-color: var(--accent-violet); }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--glass-border);
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .modal-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 16px;
+      color: var(--text-primary);
+    }
+    .modal-market-tag {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 50px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+      color: #fff;
+      font-size: 11px; font-weight: 700;
+    }
+
+    .modal-body {
+      padding: 20px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+
+    .modal-chart {
+      width: 100%;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+      max-height: 280px;
+      background: linear-gradient(135deg, rgba(0,200,255,0.1), rgba(155,92,245,0.1));
+      display: flex; align-items: center; justify-content: center;
+      min-height: 150px;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .modal-section {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .modal-section-label {
+      font-size: 12px; font-weight: 700;
+      color: var(--text-secondary);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .modal-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .detail-item {
+      padding: 10px;
+      border-radius: 10px;
+      background: var(--input-bg);
+      border: 1px solid var(--glass-border);
+    }
+    .detail-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+    .detail-value {
+      font-size: 13px; font-weight: 600;
+      color: var(--text-primary);
+      font-family: 'Courier New', monospace;
+    }
+
+    .modal-notes {
+      padding: 12px;
+      border-radius: 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--glass-border);
+      font-size: 12px; line-height: 1.6;
+      color: var(--text-primary);
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .modal-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--glass-border);
+      display: flex; gap: 10px;
+    }
+    .modal-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border);
+      background: var(--input-bg);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      transition: all 0.25s ease;
+    }
+    .modal-btn:hover { border-color: var(--accent-violet); background: rgba(155,92,245,0.1); }
+    .modal-btn.danger { background: rgba(255,45,85,0.1); border-color: var(--accent-crimson); color: var(--accent-crimson); }
+    .modal-btn.danger:hover { background: rgba(255,45,85,0.2); }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="mesh-bg" aria-hidden="true"></div>
+  <div class="app-shell">
+   <nav class="sidebar" aria-label="Folder navigation">
+    <div class="sidebar-logo" aria-label="Liquid Edge Logo">
+     LE
+    </div><button class="nav-folder active" id="nav-backtest" aria-label="Backtesting" title="Backtesting"> <i data-lucide="flask-conical" style="width:20px;height:20px;"></i> <span>Back</span> </button> <button class="nav-folder" id="nav-demo" aria-label="Demo" title="Demo Trading"> <i data-lucide="monitor" style="width:20px;height:20px;"></i> <span>Demo</span> </button> <button class="nav-folder" id="nav-real" aria-label="Real-Life Trading" title="Real-Life Trading"> <i data-lucide="trending-up" style="width:20px;height:20px;"></i> <span>Real</span> </button>
+    <div class="sidebar-spacer"></div><button class="nav-folder" aria-label="Settings" title="Settings"> <i data-lucide="settings-2" style="width:20px;height:20px;"></i> </button>
+   </nav>
+   <div class="main-content">
+    <header class="topbar">
+     <h1 class="app-title" id="appTitleEl">Liquid Edge Trading Journal</h1>
+     <div class="topbar-spacer"></div><button class="theme-toggle" id="themeToggle" aria-label="Toggle Light/Dark theme">
+      <div class="morph-dot"></div><span id="themeLabel">Dark Mode</span> </button>
+    </header>
+    <div class="scroll-area">
+     <div class="glass card-section" style="margin-bottom:16px;">
+      <div class="section-label">
+       Market Selector
+      </div>
+      <div class="market-scroll" id="marketScroll" role="listbox" aria-label="Market selector"></div>
+     </div>
+     <div class="journal-grid">
+      <div style="display:flex;flex-direction:column;gap:16px;">
+       <div class="glass card-section">
+        <div class="section-label">
+         Sniper Checklist
+        </div>
+        <div class="checklist-row">
+         <label for="chk1" id="lbl-chk1">4H Zone Identified?</label>
+         <div class="liquid-toggle"><span class="toggle-label" id="chk1-lbl">No</span>
+          <div class="track" id="track1" role="switch" aria-checked="false" tabindex="0"><input type="checkbox" id="chk1">
+           <div class="thumb"></div>
+          </div>
+         </div>
+        </div>
+        <div class="checklist-row">
+         <label for="chk2" id="lbl-chk2">Equal Highs/Lows Identified?</label>
+         <div class="liquid-toggle"><span class="toggle-label" id="chk2-lbl">No</span>
+          <div class="track" id="track2" role="switch" aria-checked="false" tabindex="0"><input type="checkbox" id="chk2">
+           <div class="thumb"></div>
+          </div>
+         </div>
+        </div>
+        <div class="checklist-row">
+         <label for="chk3" id="lbl-chk3">15m Liquidity Sweep Confirmed?</label>
+         <div class="liquid-toggle"><span class="toggle-label" id="chk3-lbl">No</span>
+          <div class="track" id="track3" role="switch" aria-checked="false" tabindex="0"><input type="checkbox" id="chk3">
+           <div class="thumb"></div>
+          </div>
+         </div>
+        </div>
+        <div class="checklist-row">
+         <label for="chk4" id="lbl-chk4">Target Level Identified?</label>
+         <div class="liquid-toggle"><span class="toggle-label" id="chk4-lbl">No</span>
+          <div class="track" id="track4" role="switch" aria-checked="false" tabindex="0"><input type="checkbox" id="chk4">
+           <div class="thumb"></div>
+          </div>
+         </div>
+        </div>
+       </div>
+       <div class="glass card-section">
+        <div class="section-label">
+         Chart Upload Portal
+        </div>
+        <div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="Drop chart screenshot here or click to upload"><input type="file" id="fileInput" accept="image/*" aria-label="Upload chart screenshot">
+         <div class="dz-inner" id="dzInner">
+          <div class="dz-icon-wrap">
+           <i data-lucide="upload-cloud" class="dz-icon" style="width:26px;height:26px;"></i>
+          </div>
+          <div class="dz-text">
+           <strong>Drop chart screenshot</strong><br>
+           or click to browse
+          </div>
+         </div>
+        </div>
+       </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+       <div class="glass card-section" style="flex:1;">
+        <div class="section-label">
+         Mental Vault
+        </div><textarea class="vault-textarea" id="vaultText" placeholder="Pour your thoughts here — no judgment, pure clarity..." aria-label="Trading journal notes" rows="8"></textarea>
+        <div class="red-flag-warn" id="redFlagWarn" role="alert">
+         ⚠ Red Flag Detected — Emotional language found. Pause &amp; reassess.
+        </div>
+       </div>
+       <div class="glass card-section">
+        <div class="section-label">
+         Trade Details
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+         <div>
+          <label for="entryPrice" style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">Entry Price</label> <input type="number" id="entryPrice" placeholder="0.00" style="width:100%;padding:9px 12px;border-radius:12px;border:1.5px solid var(--glass-border);background:var(--input-bg);color:var(--text-primary);font-size:13px;outline:none;transition:border-color 0.3s;">
+         </div>
+         <div>
+          <label for="exitPrice" style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">Exit Price</label> <input type="number" id="exitPrice" placeholder="0.00" style="width:100%;padding:9px 12px;border-radius:12px;border:1.5px solid var(--glass-border);background:var(--input-bg);color:var(--text-primary);font-size:13px;outline:none;transition:border-color 0.3s;">
+         </div>
+         <div>
+          <label for="stopLoss" style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">Stop Loss</label> <input type="number" id="stopLoss" placeholder="0.00" style="width:100%;padding:9px 12px;border-radius:12px;border:1.5px solid var(--glass-border);background:var(--input-bg);color:var(--text-primary);font-size:13px;outline:none;transition:border-color 0.3s;">
+         </div>
+         <div>
+          <label for="takeProfit" style="font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;">Take Profit</label> <input type="number" id="takeProfit" placeholder="0.00" style="width:100%;padding:9px 12px;border-radius:12px;border:1.5px solid var(--glass-border);background:var(--input-bg);color:var(--text-primary);font-size:13px;outline:none;transition:border-color 0.3s;">
+         </div>
+        </div><button class="save-btn" id="saveBtn" aria-label="Save trade entry">Save Trade Entry</button>
+       </div>
+      </div>
+     </div>
+     <div class="glass archive-section" id="archiveSection">
+      <div class="section-label">
+       📊 Historical Trade Archive
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;">
+       <div class="timeline-nav" id="timelineNav" role="listbox" aria-label="Month selector"></div>
+       <div class="view-toggle-group" style="flex-shrink:0;"><button class="view-toggle active" data-view="daily" aria-pressed="true">Daily</button> <button class="view-toggle" data-view="weekly" aria-pressed="false">Weekly</button>
+       </div>
+      </div>
+      <div class="filter-pills" id="filterPills" role="group" aria-label="Folder filter"><button class="filter-pill active" data-folder="all" aria-pressed="true">All</button> <button class="filter-pill" data-folder="backtest" aria-pressed="false">Backtest</button> <button class="filter-pill" data-folder="demo" aria-pressed="false">Demo</button> <button class="filter-pill" data-folder="real" aria-pressed="false">Real</button>
+      </div>
+      <div class="trade-gallery" id="tradeGallery" role="grid" aria-label="Trade history gallery"></div>
+     </div>
+    </div>
+    <div class="guardian-bar-wrap" role="status" aria-live="polite" aria-label="Guardian status bar">
+     <div class="guardian-label-row"><span class="guardian-title">⚔ THE GUARDIAN</span> <span class="guardian-status safe" id="guardianStatus">Awaiting conditions…</span>
+     </div>
+     <div class="guardian-track" aria-label="Completion progress">
+      <div class="guardian-fill" id="guardianFill"></div>
+     </div>
+    </div>
+   </div>
+  </div>
+  <div class="modal-overlay" id="tradeModal">
+   <div class="modal-glass">
+    <div class="modal-header">
+     <div>
+      <div class="modal-title" id="modalTitle">
+       Trade Details
+      </div>
+      <div id="modalMarketTag" class="modal-market-tag">
+       VIX 100s
+      </div>
+     </div><button class="modal-close" id="modalCloseBtn" aria-label="Close modal"> <i data-lucide="x" style="width:18px;height:18px;"></i> </button>
+    </div>
+    <div class="modal-body">
+     <div class="modal-section">
+      <div id="modalChartContainer" class="modal-chart">
+       Chart Preview
+      </div>
+     </div>
+     <div class="modal-section">
+      <div class="modal-section-label">
+       Trade Metrics
+      </div>
+      <div class="modal-details-grid">
+       <div class="detail-item">
+        <div class="detail-label">
+         Entry
+        </div>
+        <div class="detail-value" id="modalEntry">
+         —
+        </div>
+       </div>
+       <div class="detail-item">
+        <div class="detail-label">
+         Exit
+        </div>
+        <div class="detail-value" id="modalExit">
+         —
+        </div>
+       </div>
+       <div class="detail-item">
+        <div class="detail-label">
+         Stop Loss
+        </div>
+        <div class="detail-value" id="modalSL">
+         —
+        </div>
+       </div>
+       <div class="detail-item">
+        <div class="detail-label">
+         Take Profit
+        </div>
+        <div class="detail-value" id="modalTP">
+         —
+        </div>
+       </div>
+      </div>
+     </div>
+     <div class="modal-section">
+      <div class="modal-section-label">
+       Sniper Checklist
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+       <div class="detail-item">
+        <span id="modalChk1">4H Zone: <strong>—</strong></span>
+       </div>
+       <div class="detail-item">
+        <span id="modalChk2">Equal H/L: <strong>—</strong></span>
+       </div>
+       <div class="detail-item">
+        <span id="modalChk3">Sweep: <strong>—</strong></span>
+       </div>
+       <div class="detail-item">
+        <span id="modalChk4">Target: <strong>—</strong></span>
+       </div>
+      </div>
+     </div>
+     <div class="modal-section">
+      <div class="modal-section-label">
+       Mental Vault
+      </div>
+      <div class="modal-notes" id="modalNotes">
+       —
+      </div>
+     </div>
+     <div class="modal-section">
+      <div class="modal-section-label">
+       Metadata
+      </div>
+      <div class="detail-item">
+       <div class="detail-label">
+        Created
+       </div>
+       <div class="detail-value" id="modalTimestamp">
+        —
+       </div>
+      </div>
+     </div>
+    </div>
+    <div class="modal-footer"><button class="modal-btn" id="modalExportBtn">📥 Export</button> <button class="modal-btn danger" id="modalDeleteBtn">🗑 Delete</button>
+    </div>
+   </div>
+  </div>
+  <script>
+    lucide.createIcons();
+
+    // ═══ LOCAL MOCK DATABASE ═══
+    const mockDB = {
+      trades: JSON.parse(localStorage.getItem('liquid_edge_trades')) || []
+    };
+
+    // ═══ State Management ═══
+    const state = {
+      theme: localStorage.getItem('liquid_edge_theme') || 'light',
+      folder: 'backtest',
+      market: 'VIX 10',
+      checklist: { chk1: false, chk2: false, chk3: false, chk4: false },
+      redFlag: false,
+      chartImage: null,
+      hasNotes: false,
+      selectedMonth: new Date().getMonth(),
+      selectedView: 'daily',
+      selectedFilter: 'all'
+    };
+
+    const RED_FLAG_WORDS = ['felt', 'feel', 'hope', 'scared', 'fear', 'emotional', 'gamble', 'revenge', 'praying', 'pray'];
+    const MARKETS = ['VIX 10','VIX 10s','VIX 25','VIX 50','VIX 75','VIX 100','VIX 10 (1s)','VIX 25 (1s)','VIX 50 (1s)','VIX 75 (1s)','VIX 100 (1s)'];
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    // ═══ DOM References ═══
+    const html = document.documentElement;
+    const themeToggle = document.getElementById('themeToggle');
+    const themeLabel = document.getElementById('themeLabel');
+    const guardianFill = document.getElementById('guardianFill');
+    const guardianStatus = document.getElementById('guardianStatus');
+    const vaultText = document.getElementById('vaultText');
+    const redFlagWarn = document.getElementById('redFlagWarn');
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const dzInner = document.getElementById('dzInner');
+    const saveBtn = document.getElementById('saveBtn');
+    const marketScroll = document.getElementById('marketScroll');
+    const appTitleEl = document.getElementById('appTitleEl');
+    const timelineNav = document.getElementById('timelineNav');
+    const filterPills = document.getElementById('filterPills');
+    const tradeGallery = document.getElementById('tradeGallery');
+    const tradeModal = document.getElementById('tradeModal');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const modalDeleteBtn = document.getElementById('modalDeleteBtn');
+    const modalExportBtn = document.getElementById('modalExportBtn');
+    const archiveSection = document.getElementById('archiveSection');
+
+    // ═══ Init Theme ═══
+    html.setAttribute('data-theme', state.theme);
+    themeLabel.textContent = state.theme === 'light' ? 'Dark Mode' : 'Light Mode';
+
+    // ═══ Theme Toggle ═══
+    themeToggle.addEventListener('click', (e) => {
+      state.theme = state.theme === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', state.theme);
+      themeLabel.textContent = state.theme === 'light' ? 'Dark Mode' : 'Light Mode';
+      localStorage.setItem('liquid_edge_theme', state.theme);
+      addRipple(e, themeToggle);
+    });
+
+    // ═══ Market Selector ═══
+    function renderMarkets() {
+      marketScroll.innerHTML = '';
+      MARKETS.forEach(m => {
+        const chip = document.createElement('button');
+        chip.className = 'market-chip' + (m === state.market ? ' selected' : '');
+        chip.textContent = m;
+        chip.addEventListener('click', (e) => {
+          addRipple(e, chip);
+          state.market = m;
+          renderMarkets();
+        });
+        marketScroll.appendChild(chip);
+      });
+    }
+    renderMarkets();
+
+    // ═══ Sidebar Navigation ═══
+    ['backtest','demo','real'].forEach(id => {
+      const btn = document.getElementById('nav-' + id);
+      btn.addEventListener('click', (e) => {
+        addRipple(e, btn);
+        state.folder = id;
+        state.selectedFilter = id;
+        document.querySelectorAll('.nav-folder').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderFilterPills();
+        renderGallery();
+      });
+    });
+
+    // ═══ Checklist Toggles ═══
+    [1,2,3,4].forEach(n => {
+      const track = document.getElementById('track' + n);
+      const input = document.getElementById('chk' + n);
+      const lbl = document.getElementById('chk' + n + '-lbl');
+
+      function toggle() {
+        const val = !state.checklist['chk' + n];
+        state.checklist['chk' + n] = val;
+        input.checked = val;
+        track.setAttribute('aria-checked', val);
+        lbl.textContent = val ? 'Yes' : 'No';
+        updateGuardian();
+      }
+
+      track.addEventListener('click', toggle);
+      track.addEventListener('keydown', e => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+    });
+
+    // ═══ Guardian Update ═══
+    function updateGuardian() {
+      const checks = Object.values(state.checklist);
+      const trueCount = checks.filter(Boolean).length;
+      const totalChecks = checks.length;
+      const allChecksYes = trueCount === totalChecks;
+      const isDanger = !allChecksYes && state.hasNotes;
+
+      if (allChecksYes) {
+        guardianFill.style.width = '100%';
+        guardianFill.classList.remove('danger');
+        guardianFill.classList.add('safe');
+        guardianStatus.className = 'guardian-status safe';
+        guardianStatus.textContent = '✅ All Conditions Met — Engage!';
+      } else if (isDanger) {
+        guardianFill.style.width = '100%';
+        guardianFill.classList.add('danger');
+        guardianFill.classList.remove('safe');
+        guardianStatus.className = 'guardian-status danger';
+        guardianStatus.textContent = '🚨 Incomplete Conditions — Risk Alert';
+      } else {
+        const pct = (trueCount / totalChecks) * 100;
+        guardianFill.style.width = pct + '%';
+        guardianFill.classList.remove('danger', 'safe');
+        guardianStatus.className = 'guardian-status neutral';
+        guardianStatus.textContent = 'Awaiting conditions…';
+      }
+    }
+    updateGuardian();
+
+    // ═══ Mental Vault Red Flag Detection ═══
+    vaultText.addEventListener('input', () => {
+      const txt = vaultText.value.toLowerCase();
+      state.hasNotes = txt.trim().length > 0;
+      state.redFlag = RED_FLAG_WORDS.some(w => new RegExp('\\b' + w + '\\b').test(txt));
+
+      if (state.redFlag) {
+        vaultText.classList.add('red-flag');
+        redFlagWarn.classList.add('visible');
+      } else {
+        vaultText.classList.remove('red-flag');
+        redFlagWarn.classList.remove('visible');
+      }
+      updateGuardian();
+    });
+
+    // ═══ Drop Zone / File Upload ═══
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') fileInput.click();
+    });
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) handleImageFile(file);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) handleImageFile(fileInput.files[0]);
+    });
+
+    function handleImageFile(file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        state.chartImage = ev.target.result;
+        dzInner.innerHTML = `<img src="${ev.target.result}" class="dz-preview" alt="Chart screenshot" style="max-width:100%;max-height:120px;border-radius:12px;"><div class="dz-text" style="font-size:11px;">Click to replace</div>`;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ═══ Ripple Effect ═══
+    function addRipple(e, el) {
+      const rect = el.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height) * 1.2;
+      const x = (e.clientX || rect.left + rect.width/2) - rect.left - size/2;
+      const y = (e.clientY || rect.top + rect.height/2) - rect.top - size/2;
+      const circle = document.createElement('span');
+      circle.className = 'ripple-circle';
+      circle.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;position:absolute;`;
+      el.appendChild(circle);
+      circle.addEventListener('animationend', () => circle.remove());
+    }
+
+    // ═══ Timeline Navigation ═══
+    function renderTimeline() {
+      timelineNav.innerHTML = '';
+      MONTHS.forEach((m, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'timeline-month' + (idx === state.selectedMonth ? ' active' : '');
+        btn.textContent = m;
+        btn.addEventListener('click', () => {
+          state.selectedMonth = idx;
+          renderTimeline();
+          renderGallery();
+        });
+        timelineNav.appendChild(btn);
+      });
+    }
+    renderTimeline();
+
+    // ═══ View Toggle ═══
+    document.querySelectorAll('.view-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        state.selectedView = view;
+        document.querySelectorAll('.view-toggle').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderGallery();
+      });
+    });
+
+    // ═══ Filter Pills ═══
+    function renderFilterPills() {
+      document.querySelectorAll('.filter-pill').forEach(btn => {
+        const folder = btn.dataset.folder;
+        if (folder === state.selectedFilter) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    document.querySelectorAll('.filter-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const folder = btn.dataset.folder;
+        state.selectedFilter = folder === 'all' ? 'all' : folder;
+        renderFilterPills();
+        renderGallery();
+      });
+    });
+    renderFilterPills();
+
+    // ═══ Gallery Rendering ═══
+    function renderGallery() {
+      const filtered = mockDB.trades.filter(trade => {
+        if (state.selectedFilter !== 'all' && trade.folder !== state.selectedFilter) return false;
+        const tradeDate = new Date(trade.timestamp);
+        if (tradeDate.getMonth() !== state.selectedMonth) return false;
+        return true;
+      });
+
+      tradeGallery.innerHTML = '';
+      if (filtered.length === 0) {
+        tradeGallery.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">No trades recorded yet. Start trading! 🚀</div>';
+        return;
+      }
+
+      filtered.forEach(trade => {
+        const card = document.createElement('div');
+        card.className = 'trade-card';
+        const tradeDate = new Date(trade.timestamp);
+        const dateStr = tradeDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const allChecksYes = trade.chk1 && trade.chk2 && trade.chk3 && trade.chk4;
+        const statusClass = !allChecksYes && trade.notes ? 'danger' : (allChecksYes ? 'safe' : 'safe');
+        const statusIcon = allChecksYes ? '✓' : (trade.guardianViolation ? '⚠' : '—');
+
+        card.innerHTML = `
+          <div class="card-chart">Chart</div>
+          <div class="card-footer">
+            <div class="card-market">${trade.market}</div>
+            <div class="card-meta">
+              <span class="card-date">${dateStr}</span>
+              <span class="card-status ${statusClass}">${statusIcon}</span>
+            </div>
+          </div>
+        `;
+        card.addEventListener('click', (e) => {
+          addRipple(e, card);
+          openTradeModal(trade);
+        });
+        tradeGallery.appendChild(card);
+      });
+    }
+    renderGallery();
+
+    // ═══ Modal Functions ═══
+    function openTradeModal(trade) {
+      document.getElementById('modalTitle').textContent = new Date(trade.timestamp).toLocaleDateString();
+      document.getElementById('modalMarketTag').textContent = trade.market;
+      document.getElementById('modalEntry').textContent = trade.entry ? trade.entry.toFixed(2) : '—';
+      document.getElementById('modalExit').textContent = trade.exit ? trade.exit.toFixed(2) : '—';
+      document.getElementById('modalSL').textContent = trade.sl ? trade.sl.toFixed(2) : '—';
+      document.getElementById('modalTP').textContent = trade.tp ? trade.tp.toFixed(2) : '—';
+      document.getElementById('modalChk1').innerHTML = `4H Zone: <strong>${trade.chk1 ? '✓' : '✗'}</strong>`;
+      document.getElementById('modalChk2').innerHTML = `Equal H/L: <strong>${trade.chk2 ? '✓' : '✗'}</strong>`;
+      document.getElementById('modalChk3').innerHTML = `Sweep: <strong>${trade.chk3 ? '✓' : '✗'}</strong>`;
+      document.getElementById('modalChk4').innerHTML = `Target: <strong>${trade.chk4 ? '✓' : '✗'}</strong>`;
+      document.getElementById('modalNotes').textContent = trade.notes || '—';
+      document.getElementById('modalTimestamp').textContent = new Date(trade.timestamp).toLocaleString();
+      tradeModal.classList.add('active');
+      modalDeleteBtn.onclick = () => deleteTradeFromModal(trade);
+      modalExportBtn.onclick = () => exportTradeData(trade);
+    }
+
+    function closeTradeModal() {
+      tradeModal.classList.remove('active');
+    }
+
+    function deleteTradeFromModal(trade) {
+      if (!confirm('Are you sure you want to delete this trade?')) return;
+      mockDB.trades = mockDB.trades.filter(t => t.timestamp !== trade.timestamp);
+      localStorage.setItem('liquid_edge_trades', JSON.stringify(mockDB.trades));
+      console.log('[Liquid Edge] Trade deleted:', trade);
+      renderGallery();
+      closeTradeModal();
+    }
+
+    function exportTradeData(trade) {
+      const csv = `Trade Export\nDate,${new Date(trade.timestamp).toLocaleString()}\nMarket,${trade.market}\nEntry,${trade.entry || '—'}\nExit,${trade.exit || '—'}\nStop Loss,${trade.sl || '—'}\nTake Profit,${trade.tp || '—'}\nNotes,"${trade.notes}"\n`;
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `trade_${new Date(trade.timestamp).getTime()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    modalCloseBtn.addEventListener('click', closeTradeModal);
+    tradeModal.addEventListener('click', (e) => {
+      if (e.target === tradeModal) closeTradeModal();
+    });
+
+    // ═══ Save Button ═══
+    saveBtn.addEventListener('click', (e) => {
+      addRipple(e, saveBtn);
+
+      const entry = {
+        id: Date.now().toString(),
+        folder: state.folder,
+        market: state.market,
+        chk1: state.checklist.chk1,
+        chk2: state.checklist.chk2,
+        chk3: state.checklist.chk3,
+        chk4: state.checklist.chk4,
+        entry: parseFloat(document.getElementById('entryPrice').value) || null,
+        exit: parseFloat(document.getElementById('exitPrice').value) || null,
+        sl: parseFloat(document.getElementById('stopLoss').value) || null,
+        tp: parseFloat(document.getElementById('takeProfit').value) || null,
+        notes: vaultText.value,
+        chartImage: state.chartImage,
+        timestamp: new Date().toISOString(),
+        guardianViolation: state.redFlag
+      };
+
+      mockDB.trades.push(entry);
+      localStorage.setItem('liquid_edge_trades', JSON.stringify(mockDB.trades));
+      console.log('[Liquid Edge] Trade entry saved to local storage:', entry);
+
+      const orig = saveBtn.textContent;
+      saveBtn.textContent = '✓ Entry Saved!';
+      saveBtn.style.background = 'linear-gradient(135deg, var(--accent-green), #00d4a0)';
+
+      document.getElementById('entryPrice').value = '';
+      document.getElementById('exitPrice').value = '';
+      document.getElementById('stopLoss').value = '';
+      document.getElementById('takeProfit').value = '';
+      vaultText.value = '';
+      state.chartImage = null;
+      dzInner.innerHTML = `<div class="dz-icon-wrap"><i data-lucide="upload-cloud" class="dz-icon" style="width:26px;height:26px;"></i></div><div class="dz-text"><strong>Drop chart screenshot</strong><br>or click to browse</div>`;
+      lucide.createIcons();
+      renderGallery();
+
+      setTimeout(() => {
+        saveBtn.textContent = orig;
+        saveBtn.style.background = '';
+      }, 2200);
+    });
+
+    // ═══ Element SDK Init ═══
+    const defaultConfig = {
+      app_title: 'Liquid Edge Trading Journal',
+      journal_placeholder: 'Pour your thoughts here — no judgment, pure clarity...',
+      checklist_label_1: '4H Zone Identified?',
+      checklist_label_2: 'Equal Highs/Lows Identified?',
+      checklist_label_3: '15m Liquidity Sweep Confirmed?',
+      checklist_label_4: 'Target Level Identified?'
+    };
+
+    window.elementSdk && window.elementSdk.init({
+      defaultConfig,
+      onConfigChange: async (config) => {
+        appTitleEl.textContent = config.app_title || defaultConfig.app_title;
+        vaultText.placeholder = config.journal_placeholder || defaultConfig.journal_placeholder;
+        document.getElementById('lbl-chk1').textContent = config.checklist_label_1 || defaultConfig.checklist_label_1;
+        document.getElementById('lbl-chk2').textContent = config.checklist_label_2 || defaultConfig.checklist_label_2;
+        document.getElementById('lbl-chk3').textContent = config.checklist_label_3 || defaultConfig.checklist_label_3;
+        document.getElementById('lbl-chk4').textContent = config.checklist_label_4 || defaultConfig.checklist_label_4;
+      },
+      mapToCapabilities: () => ({
+        recolorables: [],
+        borderables: [],
+        fontEditable: undefined,
+        fontSizeable: undefined
+      }),
+      mapToEditPanelValues: (config) => new Map([
+        ['app_title', config.app_title || defaultConfig.app_title],
+        ['journal_placeholder', config.journal_placeholder || defaultConfig.journal_placeholder],
+        ['checklist_label_1', config.checklist_label_1 || defaultConfig.checklist_label_1],
+        ['checklist_label_2', config.checklist_label_2 || defaultConfig.checklist_label_2],
+        ['checklist_label_3', config.checklist_label_3 || defaultConfig.checklist_label_3],
+        ['checklist_label_4', config.checklist_label_4 || defaultConfig.checklist_label_4]
+      ])
+    });
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e2b3dfbd7483307',t:'MTc3NDU4MTQ0Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

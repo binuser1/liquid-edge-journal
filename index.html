@@ -1,0 +1,321 @@
+
+<!doctype html>
+<html lang="en" class="h-full" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Liquid Edge Trading Journal</title>
+
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+    <script defer src="./script.js"></script>
+  </head>
+  <body>
+    <div class="mesh-bg" aria-hidden="true"></div>
+    <div class="app-shell">
+      <nav class="sidebar" aria-label="Folder navigation">
+        <div class="sidebar-logo" aria-label="Liquid Edge Logo">LE</div>
+        <button class="nav-folder active" id="nav-backtest" aria-label="Backtesting" title="Backtesting">
+          <i data-lucide="flask-conical" style="width: 20px; height: 20px"></i>
+          <span>Back</span>
+        </button>
+        <button class="nav-folder" id="nav-demo" aria-label="Demo" title="Demo Trading">
+          <i data-lucide="monitor" style="width: 20px; height: 20px"></i>
+          <span>Demo</span>
+        </button>
+        <button class="nav-folder" id="nav-real" aria-label="Real-Life Trading" title="Real-Life Trading">
+          <i data-lucide="trending-up" style="width: 20px; height: 20px"></i>
+          <span>Real</span>
+        </button>
+        <div class="sidebar-spacer"></div>
+        <button class="nav-folder" aria-label="Settings" title="Settings">
+          <i data-lucide="settings-2" style="width: 20px; height: 20px"></i>
+        </button>
+      </nav>
+      <div class="main-content">
+        <header class="topbar">
+          <h1 class="app-title" id="appTitleEl">Liquid Edge Trading Journal</h1>
+          <div class="topbar-spacer"></div>
+          <div class="auth-panel" id="authPanel" aria-label="Authentication controls">
+            <input class="auth-input" id="authEmail" type="email" placeholder="Email" autocomplete="email" />
+            <input class="auth-input" id="authPassword" type="password" placeholder="Password" autocomplete="current-password" />
+            <button class="auth-btn" id="signInBtn" type="button">Sign In</button>
+            <button class="auth-btn" id="signUpBtn" type="button">Sign Up</button>
+            <button class="auth-btn ghost" id="signOutBtn" type="button">Sign Out</button>
+            <span class="auth-status" id="authStatus">Not signed in</span>
+          </div>
+          <button class="theme-toggle" id="themeToggle" aria-label="Toggle Light/Dark theme">
+            <div class="morph-dot"></div>
+            <span id="themeLabel">Dark Mode</span>
+          </button>
+        </header>
+        <div class="scroll-area">
+          <div class="glass card-section" style="margin-bottom: 16px">
+            <div class="section-label">Market Selector</div>
+            <div class="market-scroll" id="marketScroll" role="listbox" aria-label="Market selector"></div>
+          </div>
+
+          <div class="journal-grid">
+            <div style="display: flex; flex-direction: column; gap: 16px">
+              <div class="glass card-section">
+                <div class="section-label">Sniper Checklist</div>
+
+                <div class="checklist-row">
+                  <label for="chk1" id="lbl-chk1">4H Zone Identified?</label>
+                  <div class="liquid-toggle">
+                    <span class="toggle-label" id="chk1-lbl">No</span>
+                    <div class="track" id="track1" role="switch" aria-checked="false" tabindex="0">
+                      <input type="checkbox" id="chk1" />
+                      <div class="thumb"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="checklist-row">
+                  <label for="chk2" id="lbl-chk2">Equal Highs/Lows Identified?</label>
+                  <div class="liquid-toggle">
+                    <span class="toggle-label" id="chk2-lbl">No</span>
+                    <div class="track" id="track2" role="switch" aria-checked="false" tabindex="0">
+                      <input type="checkbox" id="chk2" />
+                      <div class="thumb"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="checklist-row">
+                  <label for="chk3" id="lbl-chk3">15m Liquidity Sweep Confirmed?</label>
+                  <div class="liquid-toggle">
+                    <span class="toggle-label" id="chk3-lbl">No</span>
+                    <div class="track" id="track3" role="switch" aria-checked="false" tabindex="0">
+                      <input type="checkbox" id="chk3" />
+                      <div class="thumb"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="checklist-row">
+                  <label for="chk4" id="lbl-chk4">Target Level Identified?</label>
+                  <div class="liquid-toggle">
+                    <span class="toggle-label" id="chk4-lbl">No</span>
+                    <div class="track" id="track4" role="switch" aria-checked="false" tabindex="0">
+                      <input type="checkbox" id="chk4" />
+                      <div class="thumb"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="glass card-section">
+                <div class="section-label">Chart Upload Portal</div>
+                <div
+                  class="drop-zone"
+                  id="dropZone"
+                  tabindex="0"
+                  role="button"
+                  aria-label="Drop chart screenshot here or click to upload"
+                >
+                  <input type="file" id="fileInput" accept="image/*" aria-label="Upload chart screenshot" />
+                  <div class="dz-inner" id="dzInner">
+                    <div class="dz-icon-wrap">
+                      <i data-lucide="upload-cloud" class="dz-icon" style="width: 26px; height: 26px"></i>
+                    </div>
+                    <div class="dz-text">
+                      <strong>Drop chart screenshot</strong><br />
+                      or click to browse
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px">
+              <div class="glass card-section" style="flex: 1">
+                <div class="section-label">Mental Vault</div>
+                <textarea
+                  class="vault-textarea"
+                  id="vaultText"
+                  placeholder="Pour your thoughts here — no judgment, pure clarity..."
+                  aria-label="Trading journal notes"
+                  rows="8"
+                ></textarea>
+                <div class="red-flag-warn" id="redFlagWarn" role="alert">
+                  ⚠ Red Flag Detected — Emotional language found. Pause &amp; reassess.
+                </div>
+              </div>
+
+              <div class="glass card-section">
+                <div class="section-label">Trade Details</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px">
+                  <div>
+                    <label
+                      for="entryPrice"
+                      style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px"
+                      >Entry Price</label
+                    >
+                    <input
+                      type="number"
+                      id="entryPrice"
+                      placeholder="0.00"
+                      style="width: 100%; padding: 9px 12px; border-radius: 12px; border: 1.5px solid var(--glass-border); background: var(--input-bg); color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.3s"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      for="exitPrice"
+                      style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px"
+                      >Exit Price</label
+                    >
+                    <input
+                      type="number"
+                      id="exitPrice"
+                      placeholder="0.00"
+                      style="width: 100%; padding: 9px 12px; border-radius: 12px; border: 1.5px solid var(--glass-border); background: var(--input-bg); color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.3s"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      for="stopLoss"
+                      style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px"
+                      >Stop Loss</label
+                    >
+                    <input
+                      type="number"
+                      id="stopLoss"
+                      placeholder="0.00"
+                      style="width: 100%; padding: 9px 12px; border-radius: 12px; border: 1.5px solid var(--glass-border); background: var(--input-bg); color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.3s"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      for="takeProfit"
+                      style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px"
+                      >Take Profit</label
+                    >
+                    <input
+                      type="number"
+                      id="takeProfit"
+                      placeholder="0.00"
+                      style="width: 100%; padding: 9px 12px; border-radius: 12px; border: 1.5px solid var(--glass-border); background: var(--input-bg); color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.3s"
+                    />
+                  </div>
+                </div>
+
+                <div style="margin-bottom: 12px">
+                  <div class="section-label" style="margin-bottom: 8px">Outcome</div>
+                  <div class="outcome-toggle" role="group" aria-label="Trade outcome">
+                    <button class="outcome-btn active" type="button" id="outcomeWinBtn" data-outcome="win">Win</button>
+                    <button class="outcome-btn" type="button" id="outcomeLossBtn" data-outcome="loss">Loss</button>
+                  </div>
+                </div>
+                <button class="save-btn" id="saveBtn" aria-label="Save trade entry">Save Trade Entry</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass archive-section" id="archiveSection">
+            <div class="section-label">📊 Historical Trade Archive</div>
+            <div class="winrate-row" id="winRateRow" aria-label="Win rate">
+              <span class="winrate-label">Win Rate</span>
+              <span class="winrate-value" id="winRateValue">—</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px">
+              <div class="timeline-nav" id="timelineNav" role="listbox" aria-label="Month selector"></div>
+              <div class="view-toggle-group" style="flex-shrink: 0">
+                <button class="view-toggle active" data-view="daily" aria-pressed="true">Daily</button>
+                <button class="view-toggle" data-view="weekly" aria-pressed="false">Weekly</button>
+              </div>
+            </div>
+            <div class="filter-pills" id="filterPills" role="group" aria-label="Folder filter">
+              <button class="filter-pill active" data-folder="all" aria-pressed="true">All</button>
+              <button class="filter-pill" data-folder="backtest" aria-pressed="false">Backtest</button>
+              <button class="filter-pill" data-folder="demo" aria-pressed="false">Demo</button>
+              <button class="filter-pill" data-folder="real" aria-pressed="false">Real</button>
+            </div>
+            <div class="trade-gallery" id="tradeGallery" role="grid" aria-label="Trade history gallery"></div>
+          </div>
+        </div>
+
+        <div class="guardian-bar-wrap" role="status" aria-live="polite" aria-label="Guardian status bar">
+          <div class="guardian-label-row">
+            <span class="guardian-title">⚔ THE GUARDIAN</span>
+            <span class="guardian-status safe" id="guardianStatus">Awaiting conditions…</span>
+          </div>
+          <div class="guardian-track" aria-label="Completion progress">
+            <div class="guardian-fill" id="guardianFill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="tradeModal">
+      <div class="modal-glass">
+        <div class="modal-header">
+          <div>
+            <div class="modal-title" id="modalTitle">Trade Details</div>
+            <div id="modalMarketTag" class="modal-market-tag">VIX 100s</div>
+          </div>
+          <button class="modal-close" id="modalCloseBtn" aria-label="Close modal">
+            <i data-lucide="x" style="width: 18px; height: 18px"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-section">
+            <div id="modalChartContainer" class="modal-chart">Chart Preview</div>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-label">Trade Metrics</div>
+            <div class="modal-details-grid">
+              <div class="detail-item">
+                <div class="detail-label">Entry</div>
+                <div class="detail-value" id="modalEntry">—</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Exit</div>
+                <div class="detail-value" id="modalExit">—</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Stop Loss</div>
+                <div class="detail-value" id="modalSL">—</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Take Profit</div>
+                <div class="detail-value" id="modalTP">—</div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-label">Sniper Checklist</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+              <div class="detail-item"><span id="modalChk1">4H Zone: <strong>—</strong></span></div>
+              <div class="detail-item"><span id="modalChk2">Equal H/L: <strong>—</strong></span></div>
+              <div class="detail-item"><span id="modalChk3">Sweep: <strong>—</strong></span></div>
+              <div class="detail-item"><span id="modalChk4">Target: <strong>—</strong></span></div>
+            </div>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-label">Mental Vault</div>
+            <div class="modal-notes" id="modalNotes">—</div>
+          </div>
+          <div class="modal-section">
+            <div class="modal-section-label">Metadata</div>
+            <div class="detail-item">
+              <div class="detail-label">Created</div>
+              <div class="detail-value" id="modalTimestamp">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-btn" id="modalExportBtn">📥 Export</button>
+          <button class="modal-btn danger" id="modalDeleteBtn">🗑 Delete</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
