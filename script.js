@@ -504,9 +504,14 @@
     }
   });
 
-  supabase.auth.onAuthStateChange(async (_event, session) => {
+  supabase.auth.onAuthStateChange(async (event, session) => {
     state.user = session?.user || null;
     updateAuthUI();
+
+    if (event === 'TOKEN_REFRESHED') {
+      return;
+    }
+
     if (state.user) {
       try {
         await refreshTradesAndRender();
@@ -765,11 +770,13 @@
     } catch (err) {
       alert(err.message || 'Save failed');
     } finally {
+      state.isSaving = false;
+      saveBtn.disabled = false;
       setTimeout(() => {
-        state.isSaving = false;
-        saveBtn.textContent = orig;
+        if (saveBtn.textContent === '✓ Entry Saved!') {
+          saveBtn.textContent = orig;
+        }
         if (!state.redFlag) saveBtn.style.background = '';
-        saveBtn.disabled = false;
       }, 2200);
     }
   });
