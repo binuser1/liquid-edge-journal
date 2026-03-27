@@ -1,7 +1,7 @@
 // deriv-config.js
 window.DERIV_CONFIG = {
-  // Your real App ID
-  app_id: '32PifzTFA9zRFTKLqPpp9',
+  // Use Deriv's demo App ID for testing
+  app_id: '1089',
   
   // WebSocket endpoint
   websocket_url: 'wss://ws.derivws.com/websockets/v3',
