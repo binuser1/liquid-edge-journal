@@ -511,7 +511,13 @@
         return;
       }
       setAuthStatus('Creating account...');
-      const result = await supabase.auth.signUp({ email, password });
+      const result = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+        },
+      });
       if (result.error) {
         alert(result.error.message || 'Sign up failed');
         updateAuthUI();
