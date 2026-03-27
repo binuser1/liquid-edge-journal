@@ -259,36 +259,40 @@
     if (error) throw new Error(error.message || 'Failed to load trades');
 
     const rows = data || [];
-    state.trades = await Promise.all(
-      rows.map(async (row) => {
-        let image_signed_url = null;
-        if (row.chart_path) {
-          const signed = await withSupabaseLockRetry(() =>
-            supabase.storage.from('charts').createSignedUrl(row.chart_path, 3600)
-          );
-          image_signed_url = signed.error ? null : (signed.data?.signedUrl || null);
-        }
 
-        return {
-          id: row.id,
-          created_at: row.created_at,
-          market: row.market,
-          category: row.category,
-          chk1: !!row.chk1,
-          chk2: !!row.chk2,
-          chk3: !!row.chk3,
-          chk4: !!row.chk4,
-          notes: row.notes || '',
-          entry_price: row.entry_price,
-          exit_price: row.exit_price,
-          stop_loss: row.stop_loss,
-          take_profit: row.take_profit,
-          outcome: row.outcome,
-          chart_path: row.chart_path,
-          image_signed_url,
-        };
-      })
-    );
+    const pathsToSign = rows.map((r) => r.chart_path).filter(Boolean);
+    const signedUrlMap = {};
+    if (pathsToSign.length > 0) {
+      const batchResult = await withSupabaseLockRetry(() =>
+        supabase.storage.from('charts').createSignedUrls(pathsToSign, 3600)
+      );
+      if (!batchResult.error && Array.isArray(batchResult.data)) {
+        batchResult.data.forEach((item) => {
+          if (item.path && item.signedUrl) {
+            signedUrlMap[item.path] = item.signedUrl;
+          }
+        });
+      }
+    }
+
+    state.trades = rows.map((row) => ({
+      id: row.id,
+      created_at: row.created_at,
+      market: row.market,
+      category: row.category,
+      chk1: !!row.chk1,
+      chk2: !!row.chk2,
+      chk3: !!row.chk3,
+      chk4: !!row.chk4,
+      notes: row.notes || '',
+      entry_price: row.entry_price,
+      exit_price: row.exit_price,
+      stop_loss: row.stop_loss,
+      take_profit: row.take_profit,
+      outcome: row.outcome,
+      chart_path: row.chart_path,
+      image_signed_url: row.chart_path ? (signedUrlMap[row.chart_path] || null) : null,
+    }));
   }
 
   function renderGallery() {
