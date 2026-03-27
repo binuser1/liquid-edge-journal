@@ -505,19 +505,26 @@
   });
 
   supabase.auth.onAuthStateChange(async (event, session) => {
-    state.user = session?.user || null;
-    updateAuthUI();
-
     if (event === 'TOKEN_REFRESHED') {
+      state.user = session?.user || null;
       return;
     }
 
+    if (event === 'SIGNED_OUT' && state.isSaving) {
+      return;
+    }
+
+    state.user = session?.user || null;
+    updateAuthUI();
+
     if (state.user) {
-      try {
-        await refreshTradesAndRender();
-      } catch (e) {
-        tradeGallery.innerHTML =
-          `<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">Failed to load trades: ${e.message || 'Unknown error'}</div>`;
+      if (!state.isSaving) {
+        try {
+          await refreshTradesAndRender();
+        } catch (e) {
+          tradeGallery.innerHTML =
+            `<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">Failed to load trades: ${e.message || 'Unknown error'}</div>`;
+        }
       }
     } else {
       state.trades = [];
