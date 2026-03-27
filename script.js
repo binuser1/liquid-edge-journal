@@ -87,6 +87,25 @@
     if (authStatus) authStatus.textContent = text;
   }
 
+  function isSupabaseLockError(err) {
+    const msg = (err && err.message) ? err.message : String(err || '');
+    return msg.includes('another request stole it') || msg.includes('auth-token');
+  }
+
+  async function withSupabaseLockRetry(action, retries = 3) {
+    let lastErr;
+    for (let i = 0; i <= retries; i += 1) {
+      try {
+        return await action();
+      } catch (err) {
+        if (!isSupabaseLockError(err) || i === retries) throw err;
+        lastErr = err;
+        await new Promise((resolve) => setTimeout(resolve, 150 * (i + 1)));
+      }
+    }
+    throw lastErr;
+  }
+
   function updateAuthUI() {
     if (state.user) {
       setAuthStatus(`Signed in: ${state.user.email || 'User'}`);
@@ -217,10 +236,12 @@
       return;
     }
 
-    const { data, error } = await supabase
-      .from('trades')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data, error } = await withSupabaseLockRetry(() =>
+      supabase
+        .from('trades')
+        .select('*')
+        .order('created_at', { ascending: false })
+    );
 
     if (error) throw new Error(error.message || 'Failed to load trades');
 
@@ -229,7 +250,9 @@
       rows.map(async (row) => {
         let image_signed_url = null;
         if (row.chart_path) {
-          const signed = await supabase.storage.from('charts').createSignedUrl(row.chart_path, 3600);
+          const signed = await withSupabaseLockRetry(() =>
+            supabase.storage.from('charts').createSignedUrl(row.chart_path, 3600)
+          );
           image_signed_url = signed.error ? null : (signed.data?.signedUrl || null);
         }
 
@@ -351,14 +374,18 @@
     }
 
     if (trade.chart_path) {
-      const removeResult = await supabase.storage.from('charts').remove([trade.chart_path]);
+      const removeResult = await withSupabaseLockRetry(() =>
+        supabase.storage.from('charts').remove([trade.chart_path])
+      );
       if (removeResult.error) {
         alert(removeResult.error.message || 'Failed to delete chart');
         return;
       }
     }
 
-    const { error } = await supabase.from('trades').delete().eq('id', trade.id);
+    const { error } = await withSupabaseLockRetry(() =>
+      supabase.from('trades').delete().eq('id', trade.id)
+    );
     if (error) {
       alert(error.message || 'Delete failed');
       return;
@@ -403,7 +430,9 @@
       outcome: state.outcome,
     };
 
-    const insertResult = await supabase.from('trades').insert(payload).select('id').single();
+    const insertResult = await withSupabaseLockRetry(() =>
+      supabase.from('trades').insert(payload).select('id').single()
+    );
     if (insertResult.error) {
       throw new Error(insertResult.error.message || 'Failed to save trade');
     }
@@ -412,15 +441,19 @@
     if (state.chartFile && tradeId) {
       const ext = getFileExtension(state.chartFile);
       const objectPath = `${state.user.id}/${tradeId}.${ext}`;
-      const uploadResult = await supabase.storage
-        .from('charts')
-        .upload(objectPath, state.chartFile, { cacheControl: '3600', upsert: true, contentType: state.chartFile.type });
+      const uploadResult = await withSupabaseLockRetry(() =>
+        supabase.storage
+          .from('charts')
+          .upload(objectPath, state.chartFile, { cacheControl: '3600', upsert: true, contentType: state.chartFile.type })
+      );
 
       if (uploadResult.error) {
         throw new Error(uploadResult.error.message || 'Failed to upload chart');
       }
 
-      const updateResult = await supabase.from('trades').update({ chart_path: objectPath }).eq('id', tradeId);
+      const updateResult = await withSupabaseLockRetry(() =>
+        supabase.from('trades').update({ chart_path: objectPath }).eq('id', tradeId)
+      );
       if (updateResult.error) {
         throw new Error(updateResult.error.message || 'Failed to link chart to trade');
       }
@@ -455,7 +488,7 @@
     updateAuthUI();
 
     try {
-      const authResult = await supabase.auth.getUser();
+      const authResult = await withSupabaseLockRetry(() => supabase.auth.getUser());
       if (authResult.error) throw authResult.error;
       state.user = authResult.data?.user || null;
       updateAuthUI();
@@ -512,7 +545,9 @@
         return;
       }
       setAuthStatus('Signing in...');
-      const result = await supabase.auth.signInWithPassword({ email, password });
+      const result = await withSupabaseLockRetry(() =>
+        supabase.auth.signInWithPassword({ email, password })
+      );
       if (result.error) {
         alert(result.error.message || 'Sign in failed');
         updateAuthUI();
@@ -529,13 +564,15 @@
         return;
       }
       setAuthStatus('Creating account...');
-      const result = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin,
-        },
-      });
+      const result = await withSupabaseLockRetry(() =>
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+          },
+        })
+      );
       if (result.error) {
         alert(result.error.message || 'Sign up failed');
         updateAuthUI();
@@ -549,10 +586,12 @@
   if (signOutBtn) {
     signOutBtn.addEventListener('click', async () => {
       setAuthStatus('Signing out...');
-      const result = await supabase.auth.signOut({ scope: 'local' });
+      const result = await withSupabaseLockRetry(() =>
+        supabase.auth.signOut({ scope: 'local' })
+      );
       if (result.error) {
         alert(result.error.message || 'Sign out failed');
-        const check = await supabase.auth.getSession();
+        const check = await withSupabaseLockRetry(() => supabase.auth.getSession());
         if (!check.data?.session) {
           state.user = null;
           state.trades = [];
