@@ -16,7 +16,7 @@ window.DERIV_CONFIG = {
   default_symbol: 'R_75',
   
   // Account types
-  account_type: 'real', // Real trading account
+  account_type: 'demo', // Start with demo to test
   
   // Storage keys
   storage_keys: {
