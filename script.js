@@ -592,7 +592,7 @@
     signOutBtn.addEventListener('click', async () => {
       setAuthStatus('Signing out...');
       const result = await withSupabaseLockRetry(() =>
-        supabase.auth.signOut({ scope: 'local' })
+        supabase.auth.signOut()
       );
       if (result.error) {
         alert(result.error.message || 'Sign out failed');
