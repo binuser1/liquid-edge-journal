@@ -618,7 +618,7 @@
       state.trades = [];
       updateAuthUI();
       renderSignedOutMessage();
-      supabase.auth.signOut().catch(() => {});
+      supabase.auth.signOut({ scope: 'local' }).catch(() => {});
     });
   }
 
