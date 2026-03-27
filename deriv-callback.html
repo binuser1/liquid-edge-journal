@@ -128,7 +128,7 @@
                         grant_type: 'authorization_code',
                         code: code,
                         client_id: '32PifzTFA9zRFTKLqPpp9', // Your App ID
-                        redirect_uri: 'https://liquid-edge-journal-hk3x.vercel.app'
+                        redirect_uri: window.location.origin + '/deriv-callback.html'
                     })
                 });
                 
@@ -158,7 +158,7 @@
                     window.opener.postMessage({
                         type: 'DERIV_AUTH_SUCCESS',
                         token: data.access_token
-                    }, 'https://liquid-edge-journal-hk3x.vercel.app');
+                    }, window.location.origin);
                 }
                 
             } catch (error) {
@@ -177,7 +177,7 @@
             if (window.opener && !window.opener.closed) {
                 window.close();
             } else {
-                window.location.href = 'https://liquid-edge-journal-hk3x.vercel.app';
+                window.location.href = window.location.origin;
             }
         }
         

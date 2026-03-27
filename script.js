@@ -875,6 +875,17 @@ async function connectDerivAccount() {
     statusDiv.textContent = 'Connecting...';
     statusDiv.className = 'deriv-status';
     connectBtn.disabled = true;
+
+    // Demo app_id 1089 does not support custom callback URIs reliably.
+    // Fall back to direct API token flow so live tracking can still work.
+    if (DERIV_CONFIG.app_id === '1089') {
+      const token = await promptForDerivToken();
+      if (!token) {
+        throw new Error('No API token entered');
+      }
+      await finalizeDerivConnection(token, connectBtn, statusDiv);
+      return;
+    }
     
     // Build OAuth URL
     const authUrl = `${DERIV_CONFIG.oauth_url}?app_id=${DERIV_CONFIG.app_id}&l=en&redirect_uri=${encodeURIComponent(DERIV_CONFIG.redirect_uri)}&response_type=code`;
@@ -892,19 +903,7 @@ async function connectDerivAccount() {
       
       if (event.data.type === 'DERIV_AUTH_SUCCESS') {
         const token = event.data.token;
-        
-        // Store token
-        localStorage.setItem(DERIV_CONFIG.storage_keys.token, token);
-        localStorage.setItem(DERIV_CONFIG.storage_keys.authorized, 'true');
-        
-        // Update UI
-        statusDiv.textContent = 'Connected';
-        statusDiv.className = 'deriv-status connected';
-        connectBtn.innerHTML = '<span class="btn-icon">✓</span><span class="btn-text">Connected</span>';
-        connectBtn.disabled = true;
-        
-        // Initialize chart and tracker
-        await initializeChartAndTracker(token);
+        await finalizeDerivConnection(token, connectBtn, statusDiv);
         
         // Clean up
         window.removeEventListener('message', messageHandler);
@@ -930,6 +929,67 @@ async function connectDerivAccount() {
     // Show error to user
     showSaveStatus('Failed to connect: ' + error.message, 'error');
   }
+}
+
+async function finalizeDerivConnection(token, connectBtn, statusDiv) {
+  localStorage.setItem(DERIV_CONFIG.storage_keys.token, token);
+  localStorage.setItem(DERIV_CONFIG.storage_keys.authorized, 'true');
+
+  statusDiv.textContent = 'Connected';
+  statusDiv.className = 'deriv-status connected';
+  connectBtn.innerHTML = '<span class="btn-icon">✓</span><span class="btn-text">Connected</span>';
+  connectBtn.disabled = true;
+
+  await initializeChartAndTracker(token);
+}
+
+async function promptForDerivToken() {
+  const token = window.prompt(
+    'Paste your Deriv API token (create it in Deriv Settings > API Token).',
+    ''
+  );
+
+  if (!token) return null;
+
+  const trimmed = token.trim();
+  if (!trimmed) return null;
+
+  await validateDerivToken(trimmed);
+  return trimmed;
+}
+
+async function validateDerivToken(token) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(DERIV_CONFIG.websocket_url);
+    const timeout = setTimeout(() => {
+      ws.close();
+      reject(new Error('Deriv token validation timed out'));
+    }, 10000);
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ authorize: token }));
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.error) {
+        clearTimeout(timeout);
+        ws.close();
+        reject(new Error(data.error.message || 'Invalid Deriv token'));
+        return;
+      }
+      if (data.authorize) {
+        clearTimeout(timeout);
+        ws.close();
+        resolve();
+      }
+    };
+
+    ws.onerror = () => {
+      clearTimeout(timeout);
+      reject(new Error('Unable to validate token with Deriv'));
+    };
+  });
 }
 
 async function initializeChartAndTracker(token) {

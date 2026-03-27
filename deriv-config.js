@@ -25,8 +25,8 @@ window.DERIV_CONFIG = {
     authorized: 'deriv_authorized'
   },
   
-  // Vercel URL for OAuth callback - must match exactly in Deriv app settings
-  redirect_uri: 'https://liquid-edge-journal-hk3x.vercel.app',
+  // OAuth callback URI. Must match exactly in Deriv app settings.
+  redirect_uri: 'https://liquid-edge-journal-hk3x.vercel.app/deriv-callback.html',
   
   // Available symbols
   symbols: {

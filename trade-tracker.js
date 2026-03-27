@@ -29,7 +29,7 @@ class TradeTracker {
         this.reconnectAttempts = 0;
         
         // Authorize with token
-        this.send('authorize', { authorize: token });
+        this.send({ authorize: token });
         
         // Start heartbeat
         this.startHeartbeat();
@@ -60,11 +60,10 @@ class TradeTracker {
     }
   }
   
-  send(method, data = {}) {
+  send(payload) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      const message = { [method]: data };
-      this.ws.send(JSON.stringify(message));
-      console.log('[TradeTracker] Sent:', method, data);
+      this.ws.send(JSON.stringify(payload));
+      console.log('[TradeTracker] Sent:', payload);
     } else {
       console.warn('[TradeTracker] Cannot send - WebSocket not connected');
     }
@@ -86,7 +85,7 @@ class TradeTracker {
     
     // Ping/Pong for heartbeat
     if (data.ping) {
-      this.send('pong');
+      this.send({ pong: 1 });
       return;
     }
     
@@ -123,31 +122,31 @@ class TradeTracker {
   
   subscribeToEvents() {
     // Subscribe to ticks for current symbol
-    this.send('ticks', { 
+    this.send({
       ticks: this.currentSymbol,
       subscribe: 1 
     });
     
     // Subscribe to open contracts
-    this.send('proposal_open_contract', { 
+    this.send({
       proposal_open_contract: 1,
       subscribe: 1 
     });
     
     // Subscribe to transactions
-    this.send('transaction', { 
+    this.send({
       transaction: 1,
       subscribe: 1 
     });
     
     // Subscribe to portfolio (open positions)
-    this.send('portfolio', { 
+    this.send({
       portfolio: 1,
       subscribe: 1 
     });
     
     // Get account info
-    this.send('balance', { balance: 1, subscribe: 1 });
+    this.send({ balance: 1, subscribe: 1 });
     
     console.log('[TradeTracker] Subscribed to all trade events');
   }
@@ -347,13 +346,13 @@ class TradeTracker {
       symbol: this.currentSymbol
     };
     
-    this.send('proposal', proposal);
+    this.send(proposal);
   }
   
   startHeartbeat() {
     this.heartbeatInterval = setInterval(() => {
       if (this.isConnected) {
-        this.send('ping');
+        this.send({ ping: 1 });
       }
     }, 30000); // Ping every 30 seconds
   }
@@ -388,10 +387,10 @@ class TradeTracker {
       
       if (this.isConnected) {
         // Unsubscribe from old symbol
-        this.send('forget_all', { forget_all: 'ticks' });
+        this.send({ forget_all: 'ticks' });
         
         // Subscribe to new symbol
-        this.send('ticks', { 
+        this.send({
           ticks: newSymbol,
           subscribe: 1 
         });
