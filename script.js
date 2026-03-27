@@ -488,9 +488,9 @@
     updateAuthUI();
 
     try {
-      const authResult = await withSupabaseLockRetry(() => supabase.auth.getUser());
+      const authResult = await supabase.auth.getSession();
       if (authResult.error) throw authResult.error;
-      state.user = authResult.data?.user || null;
+      state.user = authResult.data?.session?.user || null;
       updateAuthUI();
 
       if (state.user) {
@@ -591,31 +591,12 @@
   if (signOutBtn) {
     signOutBtn.addEventListener('click', async () => {
       setAuthStatus('Signing out...');
-      const result = await withSupabaseLockRetry(() =>
-        supabase.auth.signOut()
-      );
-      if (result.error) {
-        alert(result.error.message || 'Sign out failed');
-        const check = await withSupabaseLockRetry(() => supabase.auth.getSession());
-        if (!check.data?.session) {
-          state.user = null;
-          state.trades = [];
-          updateAuthUI();
-          renderSignedOutMessage();
-          clearLocalAuthStorage();
-          window.location.reload();
-        } else {
-          updateAuthUI();
-        }
-        return;
-      }
-
+      clearLocalAuthStorage();
       state.user = null;
       state.trades = [];
       updateAuthUI();
       renderSignedOutMessage();
-      clearLocalAuthStorage();
-      window.location.reload();
+      supabase.auth.signOut().catch(() => {});
     });
   }
 
