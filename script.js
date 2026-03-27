@@ -102,6 +102,17 @@
       '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">Sign in to load your private journal data.</div>';
   }
 
+  function clearLocalAuthStorage() {
+    const projectRef = 'nadmrvvtumipncvfrywh';
+    const keyPrefix = `sb-${projectRef}-auth-token`;
+    Object.keys(localStorage).forEach((k) => {
+      if (k.startsWith(keyPrefix)) localStorage.removeItem(k);
+    });
+    Object.keys(sessionStorage).forEach((k) => {
+      if (k.startsWith(keyPrefix)) sessionStorage.removeItem(k);
+    });
+  }
+
   function resetDropZone() {
     if (state.chartPreviewUrl) {
       URL.revokeObjectURL(state.chartPreviewUrl);
@@ -547,6 +558,8 @@
           state.trades = [];
           updateAuthUI();
           renderSignedOutMessage();
+          clearLocalAuthStorage();
+          window.location.reload();
         } else {
           updateAuthUI();
         }
@@ -557,6 +570,8 @@
       state.trades = [];
       updateAuthUI();
       renderSignedOutMessage();
+      clearLocalAuthStorage();
+      window.location.reload();
     });
   }
 
