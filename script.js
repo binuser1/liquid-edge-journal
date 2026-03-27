@@ -263,15 +263,25 @@
     const pathsToSign = rows.map((r) => r.chart_path).filter(Boolean);
     const signedUrlMap = {};
     if (pathsToSign.length > 0) {
-      const batchResult = await withSupabaseLockRetry(() =>
-        supabase.storage.from('charts').createSignedUrls(pathsToSign, 3600)
-      );
-      if (!batchResult.error && Array.isArray(batchResult.data)) {
-        batchResult.data.forEach((item) => {
-          if (item.path && item.signedUrl) {
-            signedUrlMap[item.path] = item.signedUrl;
-          }
-        });
+      try {
+        const batchResult = await withSupabaseLockRetry(() =>
+          supabase.storage.from('charts').createSignedUrls(pathsToSign, 3600)
+        );
+        if (!batchResult.error && Array.isArray(batchResult.data)) {
+          batchResult.data.forEach((item) => {
+            if (item.path && item.signedUrl) {
+              signedUrlMap[item.path] = item.signedUrl;
+            }
+          });
+        }
+      } catch (urlErr) {
+        console.warn('[LiquidEdge] Signed URL batch failed, trying fallback:', urlErr.message);
+        for (const p of pathsToSign) {
+          try {
+            const single = await supabase.storage.from('charts').createSignedUrl(p, 3600);
+            if (!single.error && single.data?.signedUrl) signedUrlMap[p] = single.data.signedUrl;
+          } catch (_) {}
+        }
       }
     }
 
@@ -779,11 +789,13 @@
       const msg = err.message || 'Save failed';
       console.error('[LiquidEdge] Save error:', msg, err);
       showSaveStatus('⚠ ' + msg, 'error');
+      saveBtn.textContent = '⚠ ' + msg.substring(0, 35);
+      saveBtn.style.background = 'linear-gradient(135deg,#ff2d55,#ff6b8a)';
     } finally {
       state.isSaving = false;
       saveBtn.disabled = false;
       setTimeout(() => {
-        if (saveBtn.textContent === '✓ Entry Saved!') {
+        if (saveBtn.textContent !== orig) {
           saveBtn.textContent = orig;
         }
         if (!state.redFlag) saveBtn.style.background = '';
