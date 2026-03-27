@@ -533,6 +533,60 @@
     }
   });
 
+  // Attach save listener inside DOMContentLoaded to guarantee DOM ready on Brave
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async (e) => {
+      if (state.redFlag) {
+        saveBtn.style.background = 'linear-gradient(135deg, #ff2d55, #ff6b8a)';
+        showSaveStatus('🚨 Red Flag detected. Save blocked — reassess your trade plan first.', 'error');
+        return;
+      }
+
+      addRipple(e, saveBtn);
+
+      const orig = saveBtn.textContent;
+      state.isSaving = true;
+      saveBtn.disabled = true;
+
+      try {
+        await saveTrade();
+        await refreshTradesAndRender();
+
+        saveBtn.textContent = '✓ Entry Saved!';
+        saveBtn.style.background = 'linear-gradient(135deg, var(--accent-green), #00d4a0)';
+        showSaveStatus('✓ Trade saved successfully!', 'success');
+
+        document.getElementById('entryPrice').value = '';
+        document.getElementById('exitPrice').value = '';
+        document.getElementById('stopLoss').value = '';
+        document.getElementById('takeProfit').value = '';
+        vaultText.value = '';
+        state.hasNotes = false;
+        state.redFlag = false;
+        vaultText.classList.remove('red-flag');
+        redFlagWarn.classList.remove('visible');
+        resetDropZone();
+        setOutcome('win');
+        updateGuardian();
+      } catch (err) {
+        const msg = err.message || 'Save failed';
+        console.error('[LiquidEdge] Save error:', msg, err);
+        showSaveStatus('⚠ ' + msg, 'error');
+        saveBtn.textContent = '⚠ ' + msg.substring(0, 35);
+        saveBtn.style.background = 'linear-gradient(135deg,#ff2d55,#ff6b8a)';
+      } finally {
+        state.isSaving = false;
+        saveBtn.disabled = false;
+        setTimeout(() => {
+          if (saveBtn.textContent !== orig) {
+            saveBtn.textContent = orig;
+          }
+          if (!state.redFlag) saveBtn.style.background = '';
+        }, 2200);
+      }
+    });
+  }
+
   supabase.auth.onAuthStateChange(async (event, session) => {
     if (event === 'TOKEN_REFRESHED') {
       state.user = session?.user || null;
@@ -751,56 +805,6 @@
     if (e.target === tradeModal) closeTradeModal();
   });
 
-  // Save
-  saveBtn.addEventListener('click', async (e) => {
-    if (state.redFlag) {
-      saveBtn.style.background = 'linear-gradient(135deg, #ff2d55, #ff6b8a)';
-      alert('Red Flag detected. Save blocked — reassess your trade plan first.');
-      return;
-    }
-
-    addRipple(e, saveBtn);
-
-    const orig = saveBtn.textContent;
-    state.isSaving = true;
-    saveBtn.disabled = true;
-
-    try {
-      await saveTrade();
-      await refreshTradesAndRender();
-
-      saveBtn.textContent = '✓ Entry Saved!';
-      saveBtn.style.background = 'linear-gradient(135deg, var(--accent-green), #00d4a0)';
-      showSaveStatus('✓ Trade saved successfully!', 'success');
-
-      document.getElementById('entryPrice').value = '';
-      document.getElementById('exitPrice').value = '';
-      document.getElementById('stopLoss').value = '';
-      document.getElementById('takeProfit').value = '';
-      vaultText.value = '';
-      state.hasNotes = false;
-      state.redFlag = false;
-      vaultText.classList.remove('red-flag');
-      redFlagWarn.classList.remove('visible');
-      resetDropZone();
-      setOutcome('win');
-      updateGuardian();
-    } catch (err) {
-      const msg = err.message || 'Save failed';
-      console.error('[LiquidEdge] Save error:', msg, err);
-      showSaveStatus('⚠ ' + msg, 'error');
-      saveBtn.textContent = '⚠ ' + msg.substring(0, 35);
-      saveBtn.style.background = 'linear-gradient(135deg,#ff2d55,#ff6b8a)';
-    } finally {
-      state.isSaving = false;
-      saveBtn.disabled = false;
-      setTimeout(() => {
-        if (saveBtn.textContent !== orig) {
-          saveBtn.textContent = orig;
-        }
-        if (!state.redFlag) saveBtn.style.background = '';
-      }, 2200);
-    }
-  });
+  // Save listener will be attached inside DOMContentLoaded to ensure Brave compatibility
 })();
 
