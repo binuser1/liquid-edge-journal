@@ -14,6 +14,10 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./style.css" />
+    <script defer src="./deriv-config.js"></script>
+    <script defer src="./chart-embed.js"></script>
+    <script defer src="./trade-tracker.js"></script>
+    <script defer src="./guardian-bridge.js"></script>
     <script defer src="./script.js"></script>
   </head>
   <body>
@@ -112,7 +116,39 @@
               </div>
 
               <div class="glass card-section">
-                <div class="section-label">Chart Upload Portal</div>
+                <div class="section-label">Live Trading Chart</div>
+                <div class="chart-header">
+                  <select id="symbol-selector" class="symbol-selector" aria-label="Select trading symbol">
+                    <option value="R_75">Volatility 75</option>
+                    <option value="R_100">Volatility 100</option>
+                    <option value="BOOM_1000">Boom 1000</option>
+                    <option value="BOOM_500">Boom 500</option>
+                    <option value="BOOM_300">Boom 300</option>
+                    <option value="CRASH_1000">Crash 1000</option>
+                    <option value="CRASH_500">Crash 500</option>
+                    <option value="CRASH_300">Crash 300</option>
+                    <option value="R_10">Volatility 10</option>
+                    <option value="R_25">Volatility 25</option>
+                    <option value="R_50">Volatility 50</option>
+                  </select>
+                  <div class="chart-auth">
+                    <button id="connect-deriv" class="connect-btn" aria-label="Connect Deriv account">
+                      <span class="btn-icon">🔗</span>
+                      <span class="btn-text">Connect Deriv</span>
+                    </button>
+                    <div id="deriv-status" class="deriv-status" aria-live="polite">Not connected</div>
+                  </div>
+                </div>
+                <div id="deriv-chart-container" class="deriv-chart" role="img" aria-label="Live trading chart">
+                  <div class="chart-placeholder">
+                    <div class="placeholder-icon">📈</div>
+                    <p>Connect your Deriv account to view live charts</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="glass card-section">
+                <div class="section-label">Chart Upload (Optional)</div>
                 <div
                   class="drop-zone"
                   id="dropZone"

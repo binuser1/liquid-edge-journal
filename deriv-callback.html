@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deriv Authorization - Liquid Edge</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .status {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            color: #e74c3c;
+            background: #fee;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .success {
+            color: #27ae60;
+            background: #efe;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #5a67d8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📈</div>
+        <h1>Liquid Edge Journal</h1>
+        <div id="status" class="status">Authorizing with Deriv...</div>
+        <div id="content">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script>
+        // Handle OAuth callback from Deriv
+        async function handleCallback() {
+            const statusEl = document.getElementById('status');
+            const contentEl = document.getElementById('content');
+            
+            try {
+                // Get authorization code from URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get('code');
+                const error = urlParams.get('error');
+                
+                if (error) {
+                    throw new Error(`Authorization failed: ${error}`);
+                }
+                
+                if (!code) {
+                    throw new Error('No authorization code received');
+                }
+                
+                // Exchange code for token
+                const response = await fetch('https://api.deriv.com/oauth2/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        grant_type: 'authorization_code',
+                        code: code,
+                        client_id: '32PifzTFA9zRFTKLqPpp9', // Your App ID
+                        redirect_uri: 'https://liquid-edge-journal-hk3x.vercel.app/deriv-callback'
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error_description || 'Token exchange failed');
+                }
+                
+                const data = await response.json();
+                
+                // Store token
+                localStorage.setItem('deriv_token', data.access_token);
+                localStorage.setItem('deriv_refresh_token', data.refresh_token);
+                localStorage.setItem('deriv_authorized', 'true');
+                
+                // Show success
+                statusEl.textContent = 'Authorization Successful!';
+                contentEl.innerHTML = `
+                    <div class="success">
+                        ✓ Your Deriv account is now connected
+                    </div>
+                    <button onclick="closeWindow()">Continue to Liquid Edge</button>
+                `;
+                
+                // Notify parent window
+                if (window.opener && !window.opener.closed) {
+                    window.opener.postMessage({
+                        type: 'DERIV_AUTH_SUCCESS',
+                        token: data.access_token
+                    }, 'https://liquid-edge-journal-hk3x.vercel.app');
+                }
+                
+            } catch (error) {
+                console.error('Callback error:', error);
+                statusEl.textContent = 'Authorization Failed';
+                contentEl.innerHTML = `
+                    <div class="error">
+                        ${error.message}
+                    </div>
+                    <button onclick="closeWindow()">Close Window</button>
+                `;
+            }
+        }
+        
+        function closeWindow() {
+            if (window.opener && !window.opener.closed) {
+                window.close();
+            } else {
+                window.location.href = 'https://liquid-edge-journal-hk3x.vercel.app';
+            }
+        }
+        
+        // Handle the callback
+        handleCallback();
+    </script>
+</body>
+</html>

@@ -533,21 +533,22 @@
     }
   });
 
-  // Attach save listener inside DOMContentLoaded to guarantee DOM ready on Brave
-  if (saveBtn) {
-    saveBtn.addEventListener('click', async (e) => {
-      if (state.redFlag) {
-        saveBtn.style.background = 'linear-gradient(135deg, #ff2d55, #ff6b8a)';
-        showSaveStatus('🚨 Red Flag detected. Save blocked — reassess your trade plan first.', 'error');
-        return;
-      }
+  // Save
+  function onSaveClick(e) {
+    console.log('[LiquidEdge] Save clicked');
+    if (state.redFlag) {
+      saveBtn.style.background = 'linear-gradient(135deg, #ff2d55, #ff6b8a)';
+      showSaveStatus('🚨 Red Flag detected. Save blocked — reassess your trade plan first.', 'error');
+      return;
+    }
 
-      addRipple(e, saveBtn);
+    addRipple(e, saveBtn);
 
-      const orig = saveBtn.textContent;
-      state.isSaving = true;
-      saveBtn.disabled = true;
+    const orig = saveBtn.textContent;
+    state.isSaving = true;
+    saveBtn.disabled = true;
 
+    (async () => {
       try {
         await saveTrade();
         await refreshTradesAndRender();
@@ -584,6 +585,15 @@
           if (!state.redFlag) saveBtn.style.background = '';
         }, 2200);
       }
+    })();
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', onSaveClick);
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('saveBtn');
+      if (btn) btn.addEventListener('click', onSaveClick);
     });
   }
 
@@ -805,6 +815,220 @@
     if (e.target === tradeModal) closeTradeModal();
   });
 
-  // Save listener will be attached inside DOMContentLoaded to ensure Brave compatibility
+  // Initialize Deriv components after DOM is ready
+  initializeDerivIntegration();
 })();
+
+// Deriv Integration Functions
+function initializeDerivIntegration() {
+  // Wait for all scripts to load
+  if (!window.DERIV_CONFIG) {
+    setTimeout(initializeDerivIntegration, 100);
+    return;
+  }
+
+  // Initialize Guardian Bridge
+  if (typeof GuardianBridge !== 'undefined') {
+    window.guardianBridge = new GuardianBridge();
+    window.guardianBridge.init();
+  }
+
+  // Set up Deriv connection button
+  const connectBtn = document.getElementById('connect-deriv');
+  const statusDiv = document.getElementById('deriv-status');
+  
+  if (connectBtn) {
+    connectBtn.addEventListener('click', connectDerivAccount);
+  }
+
+  // Check if already authorized
+  const token = localStorage.getItem(DERIV_CONFIG.storage_keys.token);
+  if (token) {
+    statusDiv.textContent = 'Connected';
+    statusDiv.className = 'deriv-status connected';
+    connectBtn.textContent = 'Connected';
+    connectBtn.disabled = true;
+    
+    // Initialize chart and tracker
+    initializeChartAndTracker(token);
+  }
+
+  // Symbol selector
+  const symbolSelector = document.getElementById('symbol-selector');
+  if (symbolSelector) {
+    symbolSelector.addEventListener('change', (e) => {
+      if (window.derivChart) {
+        window.derivChart.updateSymbol(e.target.value);
+      }
+      if (window.tradeTracker) {
+        window.tradeTracker.changeSymbol(e.target.value);
+      }
+    });
+  }
+}
+
+async function connectDerivAccount() {
+  const connectBtn = document.getElementById('connect-deriv');
+  const statusDiv = document.getElementById('deriv-status');
+  
+  try {
+    statusDiv.textContent = 'Connecting...';
+    statusDiv.className = 'deriv-status';
+    connectBtn.disabled = true;
+    
+    // Build OAuth URL
+    const authUrl = `${DERIV_CONFIG.oauth_url}?app_id=${DERIV_CONFIG.app_id}&l=en&redirect_uri=${encodeURIComponent(DERIV_CONFIG.redirect_uri)}&response_type=code`;
+    
+    // Open popup for OAuth
+    const popup = window.open(
+      authUrl,
+      'deriv-auth',
+      'width=500,height=600,scrollbars=yes,resizable=yes'
+    );
+    
+    // Listen for token from popup
+    const messageHandler = async (event) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'DERIV_AUTH_SUCCESS') {
+        const token = event.data.token;
+        
+        // Store token
+        localStorage.setItem(DERIV_CONFIG.storage_keys.token, token);
+        localStorage.setItem(DERIV_CONFIG.storage_keys.authorized, 'true');
+        
+        // Update UI
+        statusDiv.textContent = 'Connected';
+        statusDiv.className = 'deriv-status connected';
+        connectBtn.innerHTML = '<span class="btn-icon">✓</span><span class="btn-text">Connected</span>';
+        connectBtn.disabled = true;
+        
+        // Initialize chart and tracker
+        await initializeChartAndTracker(token);
+        
+        // Clean up
+        window.removeEventListener('message', messageHandler);
+        popup.close();
+        
+        console.log('[Deriv] Successfully connected');
+      }
+    };
+    
+    window.addEventListener('message', messageHandler);
+    
+    // Check if popup was blocked
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      throw new Error('Popup was blocked. Please allow popups for this site.');
+    }
+    
+  } catch (error) {
+    console.error('[Deriv] Connection failed:', error);
+    statusDiv.textContent = 'Connection failed';
+    statusDiv.className = 'deriv-status error';
+    connectBtn.disabled = false;
+    
+    // Show error to user
+    showSaveStatus('Failed to connect: ' + error.message, 'error');
+  }
+}
+
+async function initializeChartAndTracker(token) {
+  try {
+    // Initialize chart
+    if (typeof DerivChart !== 'undefined') {
+      window.derivChart = new DerivChart('deriv-chart-container', DERIV_CONFIG.default_symbol);
+    }
+    
+    // Initialize trade tracker
+    if (typeof TradeTracker !== 'undefined') {
+      window.tradeTracker = new TradeTracker();
+      await window.tradeTracker.connect(token);
+    }
+    
+    console.log('[Deriv] Chart and tracker initialized');
+  } catch (error) {
+    console.error('[Deriv] Failed to initialize:', error);
+    showSaveStatus('Failed to initialize chart: ' + error.message, 'error');
+  }
+}
+
+// Global function to open trades (called from chart buttons)
+window.openDerivTrade = async function(type) {
+  if (!window.tradeTracker || !window.tradeTracker.isConnected) {
+    showSaveStatus('Please connect to Deriv first', 'error');
+    return;
+  }
+  
+  // Check Guardian
+  if (window.guardianBridge && window.guardianBridge.isBlocking) {
+    showSaveStatus('Trading blocked by Guardian', 'error');
+    return;
+  }
+  
+  try {
+    // Open trade with default stake (you can make this configurable)
+    window.tradeTracker.openTrade(type, 10, '5t');
+    console.log(`[Deriv] Opening ${type} trade`);
+  } catch (error) {
+    console.error('[Deriv] Failed to open trade:', error);
+    showSaveStatus('Failed to open trade: ' + error.message, 'error');
+  }
+};
+
+// Global function to save auto-trades to Supabase
+window.saveTradeToSupabase = async function(trade) {
+  if (!state.user) {
+    console.warn('[Deriv] User not logged in, cannot save trade');
+    return;
+  }
+  
+  const { data, error } = await supabase
+    .from('trades')
+    .insert({
+      user_id: state.user.id,
+      market: trade.market,
+      category: trade.category || 'synthetic',
+      entry_price: trade.entry_price,
+      exit_price: trade.exit_price,
+      stop_loss: null, // Auto trades don't have SL/TP
+      take_profit: null,
+      outcome: trade.outcome,
+      notes: trade.notes,
+      chk1: false, // Auto trades skip checklist
+      chk2: false,
+      chk3: false,
+      chk4: false,
+      auto_trade: trade.auto_trade || true,
+      chart_path: trade.chart_path
+    })
+    .select()
+    .single();
+    
+  if (error) {
+    console.error('[Deriv] Failed to save trade:', error);
+    throw error;
+  }
+  
+  return data;
+};
+
+// Handle OAuth callback on page load
+window.addEventListener('load', () => {
+  // Check if we're returning from OAuth
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  
+  if (code && !window.opener) {
+    // We're in the callback window
+    // The deriv-callback.html will handle this
+    console.log('[Deriv] OAuth callback detected');
+  }
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  if (window.tradeTracker) {
+    window.tradeTracker.disconnect();
+  }
+});
 
