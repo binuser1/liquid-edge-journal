@@ -5,7 +5,11 @@
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const SUPABASE_URL = 'https://nadmrvvtumipncvfrywh.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_5RE7Uspr0r2VDRqd1A4Qjw_rwAaEq1G';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      multiTab: false,
+    },
+  });
 
   const state = {
     theme: localStorage.getItem('liquid_edge_theme') || 'light',
@@ -91,6 +95,11 @@
       setAuthStatus('Not signed in');
       if (signOutBtn) signOutBtn.disabled = true;
     }
+  }
+
+  function renderSignedOutMessage() {
+    tradeGallery.innerHTML =
+      '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">Sign in to load your private journal data.</div>';
   }
 
   function resetDropZone() {
@@ -443,8 +452,7 @@
       if (state.user) {
         await refreshTradesAndRender();
       } else {
-        tradeGallery.innerHTML =
-          '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">Sign in to load your private journal data.</div>';
+        renderSignedOutMessage();
       }
     } catch (e) {
       tradeGallery.innerHTML =
@@ -465,8 +473,7 @@
     } else {
       state.trades = [];
       renderGallery();
-      tradeGallery.innerHTML =
-        '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">Sign in to load your private journal data.</div>';
+      renderSignedOutMessage();
     }
   });
 
@@ -530,10 +537,26 @@
 
   if (signOutBtn) {
     signOutBtn.addEventListener('click', async () => {
-      const result = await supabase.auth.signOut();
+      setAuthStatus('Signing out...');
+      const result = await supabase.auth.signOut({ scope: 'local' });
       if (result.error) {
         alert(result.error.message || 'Sign out failed');
+        const check = await supabase.auth.getSession();
+        if (!check.data?.session) {
+          state.user = null;
+          state.trades = [];
+          updateAuthUI();
+          renderSignedOutMessage();
+        } else {
+          updateAuthUI();
+        }
+        return;
       }
+
+      state.user = null;
+      state.trades = [];
+      updateAuthUI();
+      renderSignedOutMessage();
     });
   }
 
