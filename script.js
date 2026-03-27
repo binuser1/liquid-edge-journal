@@ -59,6 +59,7 @@
   const signUpBtn = document.getElementById('signUpBtn');
   const signOutBtn = document.getElementById('signOutBtn');
   const authStatus = document.getElementById('authStatus');
+  const saveStatus = document.getElementById('saveStatus');
 
   function formatShortDate(iso) {
     const d = new Date(iso);
@@ -85,6 +86,18 @@
 
   function setAuthStatus(text) {
     if (authStatus) authStatus.textContent = text;
+  }
+
+  function showSaveStatus(msg, type) {
+    if (!saveStatus) return;
+    saveStatus.textContent = msg;
+    saveStatus.className = 'save-status ' + (type || '');
+    if (type === 'success') {
+      setTimeout(() => {
+        saveStatus.textContent = '';
+        saveStatus.className = 'save-status';
+      }, 3000);
+    }
   }
 
   function isSupabaseLockError(err) {
@@ -412,6 +425,8 @@
   }
 
   async function saveTrade() {
+    const sessionResult = await supabase.auth.getSession();
+    state.user = sessionResult.data?.session?.user || state.user;
     if (!state.user) throw new Error('Please sign in to save trades');
 
     const payload = {
@@ -742,6 +757,7 @@
 
       saveBtn.textContent = '✓ Entry Saved!';
       saveBtn.style.background = 'linear-gradient(135deg, var(--accent-green), #00d4a0)';
+      showSaveStatus('✓ Trade saved successfully!', 'success');
 
       document.getElementById('entryPrice').value = '';
       document.getElementById('exitPrice').value = '';
@@ -756,7 +772,9 @@
       setOutcome('win');
       updateGuardian();
     } catch (err) {
-      alert(err.message || 'Save failed');
+      const msg = err.message || 'Save failed';
+      console.error('[LiquidEdge] Save error:', msg, err);
+      showSaveStatus('⚠ ' + msg, 'error');
     } finally {
       state.isSaving = false;
       saveBtn.disabled = false;

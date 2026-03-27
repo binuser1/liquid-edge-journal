@@ -806,6 +806,27 @@ body {
   transform: scale(0.98);
 }
 
+.save-status {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  min-height: 18px;
+  border-radius: 8px;
+  padding: 4px 0;
+  transition: all 0.3s ease;
+}
+
+.save-status.success {
+  color: var(--accent-green);
+}
+
+.save-status.error {
+  color: var(--accent-crimson);
+  background: rgba(255, 45, 85, 0.08);
+  padding: 6px 10px;
+}
+
 .red-flag-warn {
   font-size: 12px;
   font-weight: 600;
