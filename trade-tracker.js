@@ -11,6 +11,13 @@ class TradeTracker {
     this.currentPrice = null;
     this.currentSymbol = DERIV_CONFIG.default_symbol;
   }
+
+  getWsUrl() {
+    const baseUrl = DERIV_CONFIG.websocket_url;
+    if (baseUrl.includes('app_id=')) return baseUrl;
+    const joiner = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${joiner}app_id=${encodeURIComponent(DERIV_CONFIG.app_id)}`;
+  }
   
   async connect(token) {
     try {
@@ -21,7 +28,7 @@ class TradeTracker {
         this.ws.close();
       }
       
-      this.ws = new WebSocket(DERIV_CONFIG.websocket_url);
+      this.ws = new WebSocket(this.getWsUrl());
       
       this.ws.onopen = () => {
         console.log('[TradeTracker] WebSocket connected');

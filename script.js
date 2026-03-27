@@ -959,8 +959,12 @@ async function promptForDerivToken() {
 }
 
 async function validateDerivToken(token) {
+  const wsUrl = DERIV_CONFIG.websocket_url.includes('app_id=')
+    ? DERIV_CONFIG.websocket_url
+    : `${DERIV_CONFIG.websocket_url}${DERIV_CONFIG.websocket_url.includes('?') ? '&' : '?'}app_id=${encodeURIComponent(DERIV_CONFIG.app_id)}`;
+
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(DERIV_CONFIG.websocket_url);
+    const ws = new WebSocket(wsUrl);
     const timeout = setTimeout(() => {
       ws.close();
       reject(new Error('Deriv token validation timed out'));
