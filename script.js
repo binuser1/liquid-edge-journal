@@ -3,13 +3,38 @@
   const RED_FLAG_WORDS = ['felt', 'feel', 'hope', 'scared', 'fear', 'emotional', 'gamble', 'revenge', 'praying', 'pray', 'fomo', 'rushed', 'rush', 'rushing'];
   const MARKETS = ['VIX 10','VIX 10s','VIX 25','VIX 50','VIX 75','VIX 100','VIX 10 (1s)','VIX 25 (1s)','VIX 50 (1s)','VIX 75 (1s)','VIX 100 (1s)'];
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const SUPABASE_URL = 'https://nadmrvvtumipncvfrywh.supabase.co';
-  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_5RE7Uspr0r2VDRqd1A4Qjw_rwAaEq1G';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: {
-      multiTab: false,
-    },
-  });
+  /** True when served by `python app.py` (Flask): SQLite + files in ./uploads */
+  const USE_LOCAL_BACKEND =
+    window.location.port === '5000' ||
+    new URLSearchParams(window.location.search).get('local') === '1';
+  window.__LIQUID_EDGE_LOCAL__ = USE_LOCAL_BACKEND;
+
+  let firestoreDb;
+  let firebaseStorage;
+  let firebaseAppInited = false;
+
+  function firebaseConfigured() {
+    const c = window.FIREBASE_CONFIG;
+    return !!(c && c.apiKey && !String(c.apiKey).includes('YOUR_API_KEY'));
+  }
+
+  function ensureFirebase() {
+    if (typeof firebase === 'undefined') throw new Error('Firebase SDK failed to load');
+    if (!firebaseConfigured()) throw new Error('Edit firebase-config.js with your Firebase web app keys');
+    if (!firebaseAppInited) {
+      firebase.initializeApp(window.FIREBASE_CONFIG);
+      firebaseAppInited = true;
+      firestoreDb = firebase.firestore();
+      firebaseStorage = firebase.storage();
+    }
+  }
+
+  function docCreatedAtToIso(val) {
+    if (!val) return new Date().toISOString();
+    if (typeof val === 'string') return val;
+    if (val.toDate) return val.toDate().toISOString();
+    return new Date(val).toISOString();
+  }
 
   const state = {
     theme: localStorage.getItem('liquid_edge_theme') || 'light',
@@ -77,11 +102,20 @@
     const fromName = file.name && file.name.includes('.') ? file.name.split('.').pop() : '';
     if (fromName) return fromName.toLowerCase();
     const mime = (file.type || '').toLowerCase();
-    if (mime.includes('png')) return 'png';
-    if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg';
-    if (mime.includes('webp')) return 'webp';
-    if (mime.includes('gif')) return 'gif';
+    if (mime.startsWith('image/')) {
+      const map = { png: 'png', jpg: 'jpg', jpeg: 'jpg', gif: 'gif', webp: 'webp' };
+      return Object.keys(map).find(k => mime.includes(k)) || 'png';
+    }
     return 'png';
+  }
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Failed to convert image to base64'));
+      reader.readAsDataURL(file);
+    });
   }
 
   function setAuthStatus(text) {
@@ -100,26 +134,28 @@
     }
   }
 
-  function isSupabaseLockError(err) {
-    const msg = (err && err.message) ? err.message : String(err || '');
-    return msg.includes('another request stole it') || msg.includes('auth-token');
-  }
-
-  async function withSupabaseLockRetry(action, retries = 3) {
+  async function withRetry(action, retries = 2) {
     let lastErr;
     for (let i = 0; i <= retries; i += 1) {
       try {
         return await action();
       } catch (err) {
-        if (!isSupabaseLockError(err) || i === retries) throw err;
         lastErr = err;
-        await new Promise((resolve) => setTimeout(resolve, 150 * (i + 1)));
+        if (i === retries) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 200 * (i + 1)));
       }
     }
     throw lastErr;
   }
 
   function updateAuthUI() {
+    if (USE_LOCAL_BACKEND) {
+      setAuthStatus('Local mode: SQLite (trades.db) + images in uploads/');
+      if (signInBtn) signInBtn.disabled = true;
+      if (signUpBtn) signUpBtn.disabled = true;
+      if (signOutBtn) signOutBtn.disabled = true;
+      return;
+    }
     if (state.user) {
       setAuthStatus(`Signed in: ${state.user.email || 'User'}`);
       if (signOutBtn) signOutBtn.disabled = false;
@@ -135,13 +171,9 @@
   }
 
   function clearLocalAuthStorage() {
-    const projectRef = 'nadmrvvtumipncvfrywh';
-    const keyPrefix = `sb-${projectRef}-auth-token`;
+    // Legacy Supabase keys (safe to clear after migrating to Firebase)
     Object.keys(localStorage).forEach((k) => {
-      if (k.startsWith(keyPrefix)) localStorage.removeItem(k);
-    });
-    Object.keys(sessionStorage).forEach((k) => {
-      if (k.startsWith(keyPrefix)) sessionStorage.removeItem(k);
+      if (k.startsWith('sb-')) localStorage.removeItem(k);
     });
   }
 
@@ -244,55 +276,64 @@
   }
 
   async function loadTrades() {
+    if (USE_LOCAL_BACKEND) {
+      const res = await fetch('/api/trades');
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || 'Failed to load trades');
+      }
+      const json = await res.json();
+      const rows = json.trades || [];
+      state.trades = rows.map((t) => {
+        const imageUrl = t.image_url
+          ? new URL(t.image_url, window.location.origin).href
+          : null;
+        const pathFromUrl =
+          t.image_url && t.image_url.startsWith('/uploads/')
+            ? t.image_url.slice('/uploads/'.length)
+            : null;
+        return {
+          id: t.id,
+          created_at: t.created_at,
+          market: t.market,
+          category: t.category,
+          chk1: !!t.chk1,
+          chk2: !!t.chk2,
+          chk3: !!t.chk3,
+          chk4: !!t.chk4,
+          notes: t.notes || '',
+          entry_price: t.entry_price,
+          exit_price: t.exit_price,
+          stop_loss: t.stop_loss,
+          take_profit: t.take_profit,
+          outcome: t.outcome,
+          chart_path: pathFromUrl,
+          image_signed_url: imageUrl,
+        };
+      });
+      return;
+    }
+
     if (!state.user) {
       state.trades = [];
       return;
     }
 
-    const { data, error } = await withSupabaseLockRetry(() =>
-      supabase
-        .from('trades')
-        .select('*')
-        .eq('user_id', state.user.id)
-        .order('created_at', { ascending: false })
+    ensureFirebase();
+    const snap = await withRetry(() =>
+      firestoreDb.collection('trades').where('userId', '==', state.user.id).get()
     );
-
-    if (error) {
-      console.error('[LiquidEdge] loadTrades error:', error);
-      throw new Error(error.message || 'Failed to load trades');
-    }
-    console.log('[LiquidEdge] Loaded', (data || []).length, 'trades for user', state.user.id);
-
-    const rows = data || [];
-
-    const pathsToSign = rows.map((r) => r.chart_path).filter(Boolean);
-    const signedUrlMap = {};
-    if (pathsToSign.length > 0) {
-      try {
-        const batchResult = await withSupabaseLockRetry(() =>
-          supabase.storage.from('charts').createSignedUrls(pathsToSign, 3600)
-        );
-        if (!batchResult.error && Array.isArray(batchResult.data)) {
-          batchResult.data.forEach((item) => {
-            if (item.path && item.signedUrl) {
-              signedUrlMap[item.path] = item.signedUrl;
-            }
-          });
-        }
-      } catch (urlErr) {
-        console.warn('[LiquidEdge] Signed URL batch failed, trying fallback:', urlErr.message);
-        for (const p of pathsToSign) {
-          try {
-            const single = await supabase.storage.from('charts').createSignedUrl(p, 3600);
-            if (!single.error && single.data?.signedUrl) signedUrlMap[p] = single.data.signedUrl;
-          } catch (_) {}
-        }
-      }
-    }
+    const rows = [];
+    snap.forEach((doc) => rows.push({ id: doc.id, ...doc.data() }));
+    rows.sort(
+      (a, b) =>
+        new Date(docCreatedAtToIso(b.created_at)).getTime() -
+        new Date(docCreatedAtToIso(a.created_at)).getTime()
+    );
 
     state.trades = rows.map((row) => ({
       id: row.id,
-      created_at: row.created_at,
+      created_at: docCreatedAtToIso(row.created_at),
       market: row.market,
       category: row.category,
       chk1: !!row.chk1,
@@ -305,8 +346,8 @@
       stop_loss: row.stop_loss,
       take_profit: row.take_profit,
       outcome: row.outcome,
-      chart_path: row.chart_path,
-      image_signed_url: row.chart_path ? (signedUrlMap[row.chart_path] || null) : null,
+      chart_path: null, // Not using storage anymore
+      image_signed_url: row.chartBase64 || null, // Use base64 image directly
     }));
   }
 
@@ -415,28 +456,27 @@
   async function deleteTradeFromModal(trade) {
     if (!confirm('Are you sure you want to delete this trade?')) return;
 
+    if (USE_LOCAL_BACKEND) {
+      const res = await fetch(`/api/trades/${encodeURIComponent(trade.id)}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || res.statusText || 'Delete failed');
+        return;
+      }
+      await refreshTradesAndRender();
+      closeTradeModal();
+      return;
+    }
+
     if (!state.user) {
       alert('Sign in required');
       return;
     }
 
-    if (trade.chart_path) {
-      const removeResult = await withSupabaseLockRetry(() =>
-        supabase.storage.from('charts').remove([trade.chart_path])
-      );
-      if (removeResult.error) {
-        alert(removeResult.error.message || 'Failed to delete chart');
-        return;
-      }
-    }
+    ensureFirebase();
+    // No need to delete from storage since images are stored as base64 in the document
 
-    const { error } = await withSupabaseLockRetry(() =>
-      supabase.from('trades').delete().eq('id', trade.id)
-    );
-    if (error) {
-      alert(error.message || 'Delete failed');
-      return;
-    }
+    await withRetry(() => firestoreDb.collection('trades').doc(String(trade.id)).delete());
 
     await refreshTradesAndRender();
     closeTradeModal();
@@ -459,54 +499,65 @@
   }
 
   async function saveTrade() {
-    const sessionResult = await supabase.auth.getSession();
-    state.user = sessionResult.data?.session?.user || state.user;
+    if (USE_LOCAL_BACKEND) {
+      const fd = new FormData();
+      fd.append('market', state.market);
+      fd.append('category', state.category);
+      fd.append('notes', vaultText.value || '');
+      fd.append('chk1', state.checklist.chk1 ? '1' : '0');
+      fd.append('chk2', state.checklist.chk2 ? '1' : '0');
+      fd.append('chk3', state.checklist.chk3 ? '1' : '0');
+      fd.append('chk4', state.checklist.chk4 ? '1' : '0');
+      const ep = document.getElementById('entryPrice').value;
+      const xp = document.getElementById('exitPrice').value;
+      const sl = document.getElementById('stopLoss').value;
+      const tp = document.getElementById('takeProfit').value;
+      if (ep.trim()) fd.append('entry_price', ep.trim());
+      if (xp.trim()) fd.append('exit_price', xp.trim());
+      if (sl.trim()) fd.append('stop_loss', sl.trim());
+      if (tp.trim()) fd.append('take_profit', tp.trim());
+      fd.append('outcome', state.outcome);
+      if (state.chartFile) {
+        fd.append('image', state.chartFile, state.chartFile.name);
+      }
+      const res = await fetch('/api/trades', { method: 'POST', body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || res.statusText || 'Failed to save trade');
+      }
+      return;
+    }
+
     if (!state.user) throw new Error('Please sign in to save trades');
 
-    const payload = {
-      user_id: state.user.id,
-      market: state.market,
-      category: state.category,
-      chk1: !!state.checklist.chk1,
-      chk2: !!state.checklist.chk2,
-      chk3: !!state.checklist.chk3,
-      chk4: !!state.checklist.chk4,
-      notes: vaultText.value || '',
-      entry_price: toNumberOrNull(document.getElementById('entryPrice').value),
-      exit_price: toNumberOrNull(document.getElementById('exitPrice').value),
-      stop_loss: toNumberOrNull(document.getElementById('stopLoss').value),
-      take_profit: toNumberOrNull(document.getElementById('takeProfit').value),
-      outcome: state.outcome,
-    };
+    ensureFirebase();
+    const uid = state.user.id;
 
-    const insertResult = await withSupabaseLockRetry(() =>
-      supabase.from('trades').insert(payload).select('id').single()
+    // Convert image to base64 if present
+    let chartBase64 = null;
+    if (state.chartFile) {
+      chartBase64 = await fileToBase64(state.chartFile);
+    }
+
+    const docRef = await withRetry(() =>
+      firestoreDb.collection('trades').add({
+        userId: uid,
+        created_at: firebase.firestore.FieldValue.serverTimestamp(),
+        market: state.market,
+        category: state.category,
+        chk1: !!state.checklist.chk1,
+        chk2: !!state.checklist.chk2,
+        chk3: !!state.checklist.chk3,
+        chk4: !!state.checklist.chk4,
+        notes: vaultText.value || '',
+        entry_price: toNumberOrNull(document.getElementById('entryPrice').value),
+        exit_price: toNumberOrNull(document.getElementById('exitPrice').value),
+        stop_loss: toNumberOrNull(document.getElementById('stopLoss').value),
+        take_profit: toNumberOrNull(document.getElementById('takeProfit').value),
+        outcome: state.outcome,
+        chartBase64: chartBase64, // Store image as base64 directly in Firestore
+      })
     );
-    if (insertResult.error) {
-      throw new Error(insertResult.error.message || 'Failed to save trade');
-    }
-
-    const tradeId = insertResult.data?.id;
-    if (state.chartFile && tradeId) {
-      const ext = getFileExtension(state.chartFile);
-      const objectPath = `${state.user.id}/${tradeId}.${ext}`;
-      const uploadResult = await withSupabaseLockRetry(() =>
-        supabase.storage
-          .from('charts')
-          .upload(objectPath, state.chartFile, { cacheControl: '3600', upsert: true, contentType: state.chartFile.type })
-      );
-
-      if (uploadResult.error) {
-        throw new Error(uploadResult.error.message || 'Failed to upload chart');
-      }
-
-      const updateResult = await withSupabaseLockRetry(() =>
-        supabase.from('trades').update({ chart_path: objectPath }).eq('id', tradeId)
-      );
-      if (updateResult.error) {
-        throw new Error(updateResult.error.message || 'Failed to link chart to trade');
-      }
-    }
   }
 
   function setActiveFolderBtn(id) {
@@ -537,19 +588,38 @@
     updateAuthUI();
 
     try {
-      const authResult = await supabase.auth.getSession();
-      if (authResult.error) throw authResult.error;
-      state.user = authResult.data?.session?.user || null;
-      updateAuthUI();
-
-      if (state.user) {
+      if (USE_LOCAL_BACKEND) {
+        state.user = { id: 'local', email: 'local@localhost' };
+        updateAuthUI();
         await refreshTradesAndRender();
+      } else if (!firebaseConfigured()) {
+        setAuthStatus('Add your Firebase keys in firebase-config.js');
+        tradeGallery.innerHTML =
+          '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">Copy firebase-config.example.js to firebase-config.js and paste your Firebase web app config from the Firebase Console.</div>';
       } else {
-        renderSignedOutMessage();
+        ensureFirebase();
+        firebase.auth().onAuthStateChanged(async (user) => {
+          state.user = user ? { id: user.uid, email: user.email } : null;
+          updateAuthUI();
+          if (state.user) {
+            if (!state.isSaving) {
+              try {
+                await refreshTradesAndRender();
+              } catch (e) {
+                tradeGallery.innerHTML =
+                  `<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">Failed to load trades: ${e.message || 'Unknown error'}</div>`;
+              }
+            }
+          } else {
+            state.trades = [];
+            renderGallery();
+            renderSignedOutMessage();
+          }
+        });
       }
     } catch (e) {
       tradeGallery.innerHTML =
-        `<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">Failed to initialize Supabase: ${e.message || 'Unknown error'}</div>`;
+        `<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">Failed to initialize: ${e.message || 'Unknown error'}</div>`;
     }
   });
 
@@ -620,35 +690,6 @@
     });
   }
 
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'TOKEN_REFRESHED') {
-      state.user = session?.user || null;
-      return;
-    }
-
-    if (event === 'SIGNED_OUT' && state.isSaving) {
-      return;
-    }
-
-    state.user = session?.user || null;
-    updateAuthUI();
-
-    if (state.user) {
-      if (!state.isSaving) {
-        try {
-          await refreshTradesAndRender();
-        } catch (e) {
-          tradeGallery.innerHTML =
-            `<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">Failed to load trades: ${e.message || 'Unknown error'}</div>`;
-        }
-      }
-    } else {
-      state.trades = [];
-      renderGallery();
-      renderSignedOutMessage();
-    }
-  });
-
   function setOutcome(outcome) {
     state.outcome = outcome;
     if (outcomeWinBtn && outcomeLossBtn) {
@@ -666,6 +707,7 @@
 
   if (signInBtn) {
     signInBtn.addEventListener('click', async () => {
+      if (USE_LOCAL_BACKEND || !firebaseConfigured()) return;
       const email = (authEmail?.value || '').trim();
       const password = (authPassword?.value || '').trim();
       if (!email || !password) {
@@ -673,11 +715,11 @@
         return;
       }
       setAuthStatus('Signing in...');
-      const result = await withSupabaseLockRetry(() =>
-        supabase.auth.signInWithPassword({ email, password })
-      );
-      if (result.error) {
-        alert(result.error.message || 'Sign in failed');
+      try {
+        ensureFirebase();
+        await firebase.auth().signInWithEmailAndPassword(email, password);
+      } catch (e) {
+        alert(e.message || 'Sign in failed');
         updateAuthUI();
       }
     });
@@ -685,6 +727,7 @@
 
   if (signUpBtn) {
     signUpBtn.addEventListener('click', async () => {
+      if (USE_LOCAL_BACKEND || !firebaseConfigured()) return;
       const email = (authEmail?.value || '').trim();
       const password = (authPassword?.value || '').trim();
       if (!email || !password) {
@@ -692,34 +735,32 @@
         return;
       }
       setAuthStatus('Creating account...');
-      const result = await withSupabaseLockRetry(() =>
-        supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: window.location.origin,
-          },
-        })
-      );
-      if (result.error) {
-        alert(result.error.message || 'Sign up failed');
+      try {
+        ensureFirebase();
+        await firebase.auth().createUserWithEmailAndPassword(email, password);
+        alert('Account created. You can sign in if email verification is required by your Firebase settings.');
+      } catch (e) {
+        alert(e.message || 'Sign up failed');
         updateAuthUI();
         return;
       }
-      alert('Account created. If email confirmation is enabled, verify your email then sign in.');
       updateAuthUI();
     });
   }
 
   if (signOutBtn) {
     signOutBtn.addEventListener('click', async () => {
+      if (USE_LOCAL_BACKEND) return;
       setAuthStatus('Signing out...');
       clearLocalAuthStorage();
+      try {
+        ensureFirebase();
+        await firebase.auth().signOut();
+      } catch (_) {}
       state.user = null;
       state.trades = [];
       updateAuthUI();
       renderSignedOutMessage();
-      supabase.auth.signOut({ scope: 'local' }).catch(() => {});
     });
   }
 
@@ -843,6 +884,43 @@
     if (e.target === tradeModal) closeTradeModal();
   });
 
+  window.showSaveStatus = showSaveStatus;
+  window.refreshTradesAndRender = refreshTradesAndRender;
+
+  window.saveTradeToSupabase = async function (trade) {
+    if (USE_LOCAL_BACKEND || window.__LIQUID_EDGE_LOCAL__) {
+      console.warn('[Deriv] Auto-journal disabled in local Flask mode.');
+      return;
+    }
+    if (!firebaseConfigured()) {
+      console.warn('[Deriv] Configure firebase-config.js for auto-journal.');
+      return;
+    }
+    if (!state.user) {
+      console.warn('[Deriv] User not logged in, cannot save trade');
+      return;
+    }
+    ensureFirebase();
+    await firestoreDb.collection('trades').add({
+      userId: state.user.id,
+      created_at: firebase.firestore.FieldValue.serverTimestamp(),
+      market: trade.market,
+      category: trade.category || 'synthetic',
+      entry_price: trade.entry_price,
+      exit_price: trade.exit_price,
+      stop_loss: null,
+      take_profit: null,
+      outcome: trade.outcome,
+      notes: trade.notes || '',
+      chk1: false,
+      chk2: false,
+      chk3: false,
+      chk4: false,
+      auto_trade: true,
+      chartBase64: null, // Auto trades don't have charts
+    });
+  };
+
   // Initialize Deriv components after DOM is ready
   initializeDerivIntegration();
 })();
@@ -955,7 +1033,7 @@ async function connectDerivAccount() {
     connectBtn.disabled = false;
     
     // Show error to user
-    showSaveStatus('Failed to connect: ' + error.message, 'error');
+    window.showSaveStatus('Failed to connect: ' + error.message, 'error');
   }
 }
 
@@ -1040,20 +1118,20 @@ async function initializeChartAndTracker(token) {
     console.log('[Deriv] Chart and tracker initialized');
   } catch (error) {
     console.error('[Deriv] Failed to initialize:', error);
-    showSaveStatus('Failed to initialize chart: ' + error.message, 'error');
+    window.showSaveStatus('Failed to initialize chart: ' + error.message, 'error');
   }
 }
 
 // Global function to open trades (called from chart buttons)
 window.openDerivTrade = async function(type) {
   if (!window.tradeTracker || !window.tradeTracker.isConnected) {
-    showSaveStatus('Please connect to Deriv first', 'error');
+    window.showSaveStatus('Please connect to Deriv first', 'error');
     return;
   }
   
   // Check Guardian
   if (window.guardianBridge && window.guardianBridge.isBlocking) {
-    showSaveStatus('Trading blocked by Guardian', 'error');
+    window.showSaveStatus('Trading blocked by Guardian', 'error');
     return;
   }
   
@@ -1063,45 +1141,8 @@ window.openDerivTrade = async function(type) {
     console.log(`[Deriv] Opening ${type} trade`);
   } catch (error) {
     console.error('[Deriv] Failed to open trade:', error);
-    showSaveStatus('Failed to open trade: ' + error.message, 'error');
+    window.showSaveStatus('Failed to open trade: ' + error.message, 'error');
   }
-};
-
-// Global function to save auto-trades to Supabase
-window.saveTradeToSupabase = async function(trade) {
-  if (!state.user) {
-    console.warn('[Deriv] User not logged in, cannot save trade');
-    return;
-  }
-  
-  const { data, error } = await supabase
-    .from('trades')
-    .insert({
-      user_id: state.user.id,
-      market: trade.market,
-      category: trade.category || 'synthetic',
-      entry_price: trade.entry_price,
-      exit_price: trade.exit_price,
-      stop_loss: null, // Auto trades don't have SL/TP
-      take_profit: null,
-      outcome: trade.outcome,
-      notes: trade.notes,
-      chk1: false, // Auto trades skip checklist
-      chk2: false,
-      chk3: false,
-      chk4: false,
-      auto_trade: trade.auto_trade || true,
-      chart_path: trade.chart_path
-    })
-    .select()
-    .single();
-    
-  if (error) {
-    console.error('[Deriv] Failed to save trade:', error);
-    throw error;
-  }
-  
-  return data;
 };
 
 // Handle OAuth callback on page load

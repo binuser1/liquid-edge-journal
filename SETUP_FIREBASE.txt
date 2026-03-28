@@ -1,0 +1,33 @@
+Liquid Edge — Firebase setup (free Spark plan)
+
+1) Create project
+   - https://console.firebase.google.com → Add project → name it → Continue (Analytics optional).
+
+2) Register a Web app
+   - Project overview → "</>" Web → register app → copy the firebaseConfig object.
+
+3) Paste config
+   - Copy firebase-config.example.js to firebase-config.js
+   - Replace YOUR_* placeholders with the config values from step 2.
+
+4) Authentication
+   - Build → Authentication → Get started → Sign-in method → Email/Password → Enable → Save.
+
+5) Firestore
+   - Build → Firestore Database → Create database → Start in production mode (we add rules next).
+   - Location: pick closest region.
+
+6) Storage
+   - Build → Storage → Get started → same region as Firestore → Done.
+
+7) Security rules (important)
+   - Firestore → Rules → paste contents of firebase/firestore.rules → Publish.
+   - Storage → Rules → paste contents of firebase/storage.rules → Publish.
+
+8) Authorized domains (for Vercel)
+   - Authentication → Settings → Authorized domains → Add your Vercel domain (e.g. liquid-edge-journal-hk3x.vercel.app).
+
+9) Deploy
+   - Commit firebase-config.js and push. Open the live site, sign up once, save a trade with an image.
+
+Note: Old Supabase data does not migrate automatically. This is a fresh Firebase project for new entries.
