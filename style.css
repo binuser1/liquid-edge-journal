@@ -940,6 +940,18 @@ body {
   border: 1.5px solid var(--glass-border);
 }
 
+.deriv-chart-surface {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.deriv-chart-surface canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .chart-placeholder {
   display: flex;
   flex-direction: column;

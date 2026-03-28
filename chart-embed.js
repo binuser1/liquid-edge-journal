@@ -1,70 +1,140 @@
 // chart-embed.js
+// SmartTrader bundle at smarttrader.deriv.com/dist/main.js is no longer available (404).
+// Live view uses tick data from TradeTracker (same WebSocket authorize flow).
 class DerivChart {
   constructor(containerId, symbol) {
     this.container = document.getElementById(containerId);
     this.symbol = symbol || DERIV_CONFIG.default_symbol;
     this.chart = null;
+    this.canvas = null;
+    this.ctx = null;
+    this.priceHistory = [];
+    this.maxPoints = 180;
+    this._logicalW = 0;
+    this._logicalH = 0;
+    this._resizeObserver = null;
     this.isConnected = false;
     this.init();
+  }
+
+  handleResize() {
+    if (!this.canvas || !this.container) return;
+    const rect = this.container.getBoundingClientRect();
+    const w = Math.max(200, Math.floor(rect.width));
+    const h = Math.max(200, Math.floor(rect.height));
+    const dpr = window.devicePixelRatio || 1;
+    this.canvas.width = w * dpr;
+    this.canvas.height = h * dpr;
+    this.canvas.style.width = `${w}px`;
+    this.canvas.style.height = `${h}px`;
+    this.ctx = this.canvas.getContext('2d');
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this._logicalW = w;
+    this._logicalH = h;
+    this.redraw();
+  }
+
+  redraw() {
+    if (!this.ctx || !this._logicalW) return;
+    const w = this._logicalW;
+    const h = this._logicalH;
+    const ctx = this.ctx;
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const bg = isLight ? '#eef1f5' : '#141820';
+    const grid = isLight ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.06)';
+    const lineCol = isLight ? '#2563eb' : '#60a5fa';
+    const textCol = isLight ? '#475569' : '#94a3b8';
+
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.strokeStyle = grid;
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = 8 + (i / 4) * (h - 56);
+      ctx.beginPath();
+      ctx.moveTo(12, y);
+      ctx.lineTo(w - 12, y);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = textCol;
+    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(this.symbol, 14, 22);
+
+    if (this.priceHistory.length < 2) {
+      ctx.font = '14px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Waiting for live ticks…', w / 2, h / 2);
+      return;
+    }
+
+    const prices = this.priceHistory.map((p) => p.price);
+    let min = Math.min(...prices);
+    let max = Math.max(...prices);
+    const span = max - min || Math.abs(min) * 0.0001 || 1;
+    const pad = span * 0.12;
+    min -= pad;
+    max += pad;
+
+    const left = 12;
+    const right = w - 12;
+    const top = 36;
+    const bottom = h - 20;
+    const plotH = bottom - top;
+    const n = this.priceHistory.length;
+
+    ctx.beginPath();
+    ctx.strokeStyle = lineCol;
+    ctx.lineWidth = 2;
+    this.priceHistory.forEach((pt, i) => {
+      const x = left + (i / (n - 1)) * (right - left);
+      const y = bottom - ((pt.price - min) / (max - min)) * plotH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    const last = this.priceHistory[n - 1].price;
+    ctx.fillStyle = textCol;
+    ctx.font = '13px ui-monospace, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(last.toFixed(2), right, top - 8);
   }
   
   async init() {
     try {
-      // Show loading state
-      this.container.innerHTML = '<div class="chart-loading">Loading chart...</div>';
-      
-      // Load Deriv chart script
-      await this.loadChartScript();
-      
-      // Initialize chart
-      this.chart = new SmartChart({
-        container: this.container,
-        symbol: this.symbol,
-        theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark',
-        locale: 'en',
-        overlays: [],
-        studyMarket: ['synthetic_index'],
-        timePeriod: '1t', // 1 tick for synthetic indices
-        chartType: 'candlestick',
-        enableDrawing: true,
-        enableIndicators: true,
-        height: 500
-      });
-      
-      // Add event listeners
+      if (!this.container) {
+        throw new Error('Chart container not found');
+      }
+
+      this.container.innerHTML = '';
+      const surface = document.createElement('div');
+      surface.className = 'deriv-chart-surface';
+      this.canvas = document.createElement('canvas');
+      surface.appendChild(this.canvas);
+      this.container.appendChild(surface);
+
+      this._resizeObserver = new ResizeObserver(() => this.handleResize());
+      this._resizeObserver.observe(this.container);
+      this.handleResize();
+
       this.setupTradeControls();
-      
-      // Monitor theme changes
       this.observeThemeChanges();
-      
+
       this.isConnected = true;
-      console.log('[DerivChart] Chart initialized for', this.symbol);
-      
+      console.log('[DerivChart] Live tick chart ready for', this.symbol);
     } catch (error) {
       console.error('[DerivChart] Failed to initialize:', error);
       this.container.innerHTML = `
         <div class="chart-error">
           <h3>Chart Failed to Load</h3>
-          <p>Please check your connection and Deriv authorization</p>
+          <p>Something went wrong setting up the chart. Try refreshing the page.</p>
           <button onclick="location.reload()" class="retry-btn">Retry</button>
         </div>
       `;
     }
-  }
-  
-  loadChartScript() {
-    return new Promise((resolve, reject) => {
-      if (window.SmartChart) {
-        resolve();
-        return;
-      }
-      
-      const script = document.createElement('script');
-      script.src = 'https://smarttrader.deriv.com/dist/main.js';
-      script.onload = resolve;
-      script.onerror = () => reject(new Error('Failed to load SmartChart script'));
-      document.head.appendChild(script);
-    });
   }
   
   setupTradeControls() {
@@ -126,12 +196,18 @@ class DerivChart {
   
   updatePrice(price) {
     const priceElement = document.getElementById('current-price');
-    if (priceElement && price) {
-      priceElement.textContent = price.toFixed(2);
-      
-      // Add animation for price change
+    if (priceElement && price != null && Number.isFinite(Number(price))) {
+      const n = Number(price);
+      priceElement.textContent = n.toFixed(2);
+
       priceElement.classList.add('price-updated');
       setTimeout(() => priceElement.classList.remove('price-updated'), 300);
+
+      this.priceHistory.push({ t: Date.now(), price: n });
+      if (this.priceHistory.length > this.maxPoints) {
+        this.priceHistory.shift();
+      }
+      this.redraw();
     }
   }
   
@@ -147,10 +223,7 @@ class DerivChart {
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === 'data-theme') {
-          const theme = document.documentElement.getAttribute('data-theme');
-          if (this.chart && this.chart.setTheme) {
-            this.chart.setTheme(theme === 'light' ? 'light' : 'dark');
-          }
+          this.redraw();
         }
       });
     });
@@ -162,9 +235,10 @@ class DerivChart {
   }
   
   updateSymbol(newSymbol) {
-    if (this.chart && newSymbol !== this.symbol) {
+    if (newSymbol && newSymbol !== this.symbol) {
       this.symbol = newSymbol;
-      this.chart.changeSymbol(newSymbol);
+      this.priceHistory = [];
+      this.redraw();
       console.log('[DerivChart] Changed symbol to', newSymbol);
     }
   }
@@ -204,10 +278,13 @@ class DerivChart {
   }
   
   destroy() {
-    if (this.chart) {
-      this.chart.destroy();
-      this.chart = null;
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
     }
+    this.chart = null;
+    this.canvas = null;
+    this.ctx = null;
     this.isConnected = false;
   }
 }
