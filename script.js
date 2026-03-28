@@ -253,10 +253,15 @@
       supabase
         .from('trades')
         .select('*')
+        .eq('user_id', state.user.id)
         .order('created_at', { ascending: false })
     );
 
-    if (error) throw new Error(error.message || 'Failed to load trades');
+    if (error) {
+      console.error('[LiquidEdge] loadTrades error:', error);
+      throw new Error(error.message || 'Failed to load trades');
+    }
+    console.log('[LiquidEdge] Loaded', (data || []).length, 'trades for user', state.user.id);
 
     const rows = data || [];
 
@@ -308,6 +313,7 @@
   function renderGallery() {
     const filtered = state.trades.filter((trade) => {
       if (state.selectedFilter !== 'all' && trade.category !== state.selectedFilter) return false;
+      // Use local time — UTC dates shift month for users in timezones ahead of UTC
       const tradeDate = new Date(trade.created_at);
       if (tradeDate.getMonth() !== state.selectedMonth) return false;
       return true;
