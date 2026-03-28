@@ -322,8 +322,22 @@
 
     tradeGallery.innerHTML = '';
     if (filtered.length === 0) {
-      tradeGallery.innerHTML =
-        '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">No trades recorded yet. Start trading! 🚀</div>';
+      const monthName = MONTHS[state.selectedMonth];
+      let msg;
+      if (state.trades.length === 0) {
+        msg = 'No trades recorded yet. Start trading! 🚀';
+      } else {
+        const folderPart =
+          state.selectedFilter !== 'all'
+            ? ` for <strong>${state.selectedFilter}</strong>`
+            : '';
+        const hint =
+          state.selectedFilter !== 'all'
+            ? ' Try <strong>All</strong> or pick the matching sidebar folder (Back / Demo / Real).'
+            : ' Try another month in the timeline above — your entries may be in a different month.';
+        msg = `No trades in <strong>${monthName}</strong>${folderPart}.${hint}`;
+      }
+      tradeGallery.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-secondary);">${msg}</div>`;
       return;
     }
 
@@ -551,6 +565,9 @@
     (async () => {
       try {
         await saveTrade();
+        // New rows use “now”; if the timeline was on another month, the card would seem to disappear.
+        state.selectedMonth = new Date().getMonth();
+        renderTimeline();
         await refreshTradesAndRender();
 
         saveBtn.textContent = '✓ Entry Saved!';
@@ -804,6 +821,11 @@
     btn.addEventListener('click', () => {
       const folder = btn.dataset.folder;
       state.selectedFilter = folder;
+      // Keep save category and sidebar aligned with the folder filter (avoids saving Demo while viewing Backtest filter).
+      if (folder !== 'all') {
+        state.category = folder;
+        setActiveFolderBtn(folder);
+      }
       renderFilterPills();
       renderGallery();
     });
