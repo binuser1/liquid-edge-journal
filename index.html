@@ -902,7 +902,7 @@ function renderArchive() {
     const pnlPct = hasPrices && !isBacktest ? ((t.outcome==='win'?'+':'-') + Math.abs(((t.exit-t.entry)/t.entry*100)).toFixed(2)+'%') : '—';
     const pnlColor = t.outcome==='win'?'var(--green)':t.outcome==='loss'?'var(--red)':'var(--text2)';
     const badge = isBacktest ? `<span class="badge badge-blue">BACKTEST</span>` : `<span class="badge badge-${t.outcome||'blue'}">${(t.outcome||'').toUpperCase()}</span>`;
-    card.innerHTML = `<div class="chart-thumb">${t.chartUrl?`<img src="${t.chartUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`:`<svg width="48" height="32" viewBox="0 0 48 32" fill="none" style="opacity:0.4"><polyline points="0,28 8,18 16,22 24,8 32,14 40,4 48,10" stroke="var(--blue)" stroke-width="2" fill="none"/></svg>`}</div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;"><span style="font-weight:700;font-size:14px;">${t.market}</span>${badge}</div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span style="font-size:11px;color:var(--text2);">${formatDate(t.date)}</span><span class="badge badge-blue" style="font-size:10px;">${t.cat}</span></div><div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);margin-bottom:8px;"><span>E: ${t.entry||'—'}</span><span>X: ${t.exit||'—'}</span><span style="color:${pnlColor};font-weight:700;">${pnlPct}</span></div>${t.notes?`<p style="font-size:11px;color:var(--text2);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${t.notes}</p>`:''}`;
+    card.innerHTML = `<div class="chart-thumb">${t.chartUrl?`<img src="${t.chartUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`:`<svg width="48" height="32" viewBox="0 0 48 32" fill="none" style="opacity:0.4"><polyline points="0,28 8,18 16,22 24,8 32,14 40,4 48,10" stroke="var(--blue)" stroke-width="2" fill="none"/></svg>`}</div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;"><span style="font-weight:700;font-size:14px;">${escapeHtml(t.market)}</span>${badge}</div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span style="font-size:11px;color:var(--text2);">${formatDate(t.date)}</span><span class="badge badge-blue" style="font-size:10px;">${escapeHtml(t.cat)}</span></div><div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);margin-bottom:8px;"><span>E: ${t.entry||'—'}</span><span>X: ${t.exit||'—'}</span><span style="color:${pnlColor};font-weight:700;">${pnlPct}</span></div>${t.notes?`<p style="font-size:11px;color:var(--text2);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${t.notes}</p>`:''}`;
     grid.appendChild(card);
   });
   lucide.createIcons();
@@ -989,7 +989,7 @@ function renderVaultEntries() {
   state.vaultNotes.forEach(note => {
     const entry = document.createElement('div');
     entry.style.cssText = 'padding:12px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);margin-bottom:8px;';
-    entry.innerHTML = `<div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px;">${formatDate(note.date)}</div><p style="font-size:13px;line-height:1.6;color:var(--text);">${note.text}</p>`;
+    entry.innerHTML = `<div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px;">${formatDate(note.date)}</div><p style="font-size:13px;line-height:1.6;color:var(--text);">${escapeHtml(note.text)}</p>`;
     list.appendChild(entry);
   });
 }
@@ -1026,6 +1026,11 @@ function showToast(msg) {
 function formatDate(dateStr) {
   if (!dateStr) return '—';
   return new Date(dateStr+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 // ── INIT ─────────────────────────────────────────────────────────
