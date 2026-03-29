@@ -97,7 +97,23 @@
   .section.active{animation:fadeIn 0.2s ease;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
   *{transition:background 0.25s,color 0.2s,border-color 0.2s;}
-  @media(max-width:640px){:root{--sidebar-w:0px;}#sidebar{display:none;}#content{padding:16px;}#auth-bar input{width:100px;}}
+  @media(max-width:640px){
+    :root{--sidebar-w:0px;--header-h:52px;}
+    #sidebar{display:none;}
+    #content{padding:12px;padding-bottom:80px;}
+    #guardian-bar{max-width:none;flex:0 0 auto;padding:7px 10px;margin:0 8px;}
+    #guardian-text{display:none;}
+    #auth-bar .desktop-auth{display:none;}
+    #auth-bar .mobile-auth-btn{display:flex !important;}
+    #mobile-nav{display:flex;}
+    .stat-val{font-size:22px;}
+    #modal-box{padding:20px;}
+  }
+  @media(min-width:641px){
+    #mobile-nav{display:none;}
+    #mobile-auth-modal{display:none !important;}
+    #auth-bar .mobile-auth-btn{display:none;}
+  }
   </style>
   </head>
   <body>
@@ -109,23 +125,44 @@
     </div>
     <span style="font-size:16px;font-weight:700;letter-spacing:-0.3px;">Liquid Edge</span>
    </div>
-   <div id="guardian-bar" class="red" style="flex:1;max-width:320px;margin:0 12px;">
+   <div id="guardian-bar" class="red" style="flex:1;max-width:320px;margin:0 12px;overflow:hidden;">
     <span class="dot-glow dot-red" id="guardian-dot"></span>
     <span id="guardian-text">Checklist incomplete — not ready to trade</span>
    </div>
    <div style="flex:1;"></div>
    <div id="auth-bar" style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-    <input type="email" id="auth-email" placeholder="Email" autocomplete="off">
-    <input type="password" id="auth-pass" placeholder="Password">
-    <button class="btn-primary" id="btn-signin" style="padding:7px 14px;font-size:13px;" onclick="handleAuth('signin')">Sign In</button>
-    <button class="btn-ghost" id="btn-signup" style="padding:7px 14px;font-size:13px;" onclick="handleAuth('signup')">Sign Up</button>
-    <button class="btn-ghost" id="btn-signout" style="display:none;padding:7px 14px;font-size:13px;" onclick="handleAuth('signout')">Sign Out</button>
-    <span id="auth-status" style="font-size:12px;color:var(--text2);white-space:nowrap;"></span>
+    <div class="desktop-auth" style="display:flex;align-items:center;gap:6px;">
+     <input type="email" id="auth-email" placeholder="Email" autocomplete="off">
+     <input type="password" id="auth-pass" placeholder="Password">
+     <button class="btn-primary" id="btn-signin" style="padding:7px 14px;font-size:13px;" onclick="handleAuth('signin')">Sign In</button>
+     <button class="btn-ghost" id="btn-signup" style="padding:7px 14px;font-size:13px;" onclick="handleAuth('signup')">Sign Up</button>
+     <button class="btn-ghost" id="btn-signout" style="display:none;padding:7px 14px;font-size:13px;" onclick="handleAuth('signout')">Sign Out</button>
+     <span id="auth-status" style="font-size:12px;color:var(--text2);white-space:nowrap;"></span>
+    </div>
+    <button class="mobile-auth-btn" onclick="toggleMobileAuth()" style="display:none;width:36px;height:36px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);flex-shrink:0;" title="Sign In">
+     <i data-lucide="user" style="width:16px;height:16px;"></i>
+    </button>
    </div>
    <button id="darkmode-btn" onclick="toggleDark()" title="Toggle dark mode" style="width:36px;height:36px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);flex-shrink:0;">
     <i data-lucide="moon" style="width:16px;height:16px;"></i>
    </button>
   </header>
+  <!-- MOBILE AUTH MODAL -->
+  <div id="mobile-auth-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center;" onclick="closeMobileAuth(event)">
+   <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;border-top:1px solid var(--border);">
+    <div style="font-size:16px;font-weight:700;margin-bottom:16px;">Sign In / Sign Up</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+     <input type="email" id="auth-email-m" placeholder="Email" autocomplete="off" style="background:var(--surface2);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:12px 14px;font-size:14px;outline:none;width:100%;font-family:'DM Sans',sans-serif;">
+     <input type="password" id="auth-pass-m" placeholder="Password" style="background:var(--surface2);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:12px 14px;font-size:14px;outline:none;width:100%;font-family:'DM Sans',sans-serif;">
+     <div style="display:flex;gap:8px;">
+      <button class="btn-primary" style="flex:1;" onclick="handleMobileAuth('signin')">Sign In</button>
+      <button class="btn-ghost" style="flex:1;" onclick="handleMobileAuth('signup')">Sign Up</button>
+     </div>
+     <button class="btn-ghost" id="btn-signout-m" style="display:none;width:100%;" onclick="handleAuth('signout');closeMobileAuthDirect();">Sign Out</button>
+     <p id="auth-status-m" style="font-size:12px;color:var(--text2);text-align:center;"></p>
+    </div>
+   </div>
+  </div>
   <!-- MAIN -->
   <div id="main-wrap">
    <!-- SIDEBAR -->
@@ -396,6 +433,25 @@
     </div>
    </div>
   </div>
+  <!-- MOBILE BOTTOM NAV -->
+  <nav id="mobile-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;height:64px;background:var(--surface);border-top:1px solid var(--border);z-index:100;align-items:center;justify-content:space-around;padding:0 8px;backdrop-filter:blur(20px);">
+   <button onclick="navigate('dashboard')" id="mnav-dashboard" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--blue);padding:8px 4px;">
+    <i data-lucide="layout-dashboard" style="width:20px;height:20px;"></i>
+    <span style="font-size:10px;font-weight:600;">Dashboard</span>
+   </button>
+   <button onclick="navigate('new-trade')" id="mnav-new-trade" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text2);padding:8px 4px;">
+    <i data-lucide="plus-circle" style="width:20px;height:20px;"></i>
+    <span style="font-size:10px;font-weight:600;">New Trade</span>
+   </button>
+   <button onclick="navigate('archive')" id="mnav-archive" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text2);padding:8px 4px;">
+    <i data-lucide="archive" style="width:20px;height:20px;"></i>
+    <span style="font-size:10px;font-weight:600;">Archive</span>
+   </button>
+   <button onclick="navigate('vault')" id="mnav-vault" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text2);padding:8px 4px;">
+    <i data-lucide="brain" style="width:20px;height:20px;"></i>
+    <span style="font-size:10px;font-weight:600;">Vault</span>
+   </button>
+  </nav>
   <!-- TOAST -->
   <div id="toast" style="position:fixed;bottom:24px;right:24px;background:var(--text);color:var(--surface);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;opacity:0;transform:translateY(10px);transition:all 0.3s;z-index:9999;pointer-events:none;max-width:300px;"></div>
   <script>
@@ -445,6 +501,29 @@ function fileToBase64(file) {
   });
 }
 
+// ── MOBILE AUTH ──────────────────────────────────────────────────
+function toggleMobileAuth() {
+  const m = document.getElementById('mobile-auth-modal');
+  m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+}
+function closeMobileAuth(e) {
+  if (e.target === document.getElementById('mobile-auth-modal')) closeMobileAuthDirect();
+}
+function closeMobileAuthDirect() {
+  document.getElementById('mobile-auth-modal').style.display = 'none';
+}
+async function handleMobileAuth(action) {
+  const emailVal = document.getElementById('auth-email-m').value.trim();
+  const passVal = document.getElementById('auth-pass-m').value;
+  if (!emailVal || !passVal) { showToast('⚠ Enter email and password'); return; }
+  try {
+    ensureFirebase();
+    if (action === 'signin') await firebase.auth().signInWithEmailAndPassword(emailVal, passVal);
+    else await firebase.auth().createUserWithEmailAndPassword(emailVal, passVal);
+    closeMobileAuthDirect();
+  } catch(e) { showToast('⚠ ' + (e.message || 'Auth failed')); }
+}
+
 // ── AUTH ───────────────────────────────────────────────────────────
 async function handleAuth(action) {
   const emailVal = document.getElementById('auth-email').value.trim();
@@ -468,6 +547,13 @@ function updateAuthUI() {
   const st = document.getElementById('auth-status');
   st.textContent = has ? '● ' + state.user.email : '';
   st.style.color = has ? 'var(--green)' : '';
+  // Mobile modal sync
+  const mBtn = document.querySelector('.mobile-auth-btn');
+  if (mBtn) mBtn.style.color = has ? 'var(--green)' : 'var(--text2)';
+  const stm = document.getElementById('auth-status-m');
+  if (stm) stm.textContent = has ? '● Signed in as ' + state.user.email : '';
+  const soBtn = document.getElementById('btn-signout-m');
+  if (soBtn) soBtn.style.display = has ? '' : 'none';
 }
 
 // ── DATA LOADING ───────────────────────────────────────────────────
@@ -528,6 +614,12 @@ function navigate(id) {
   document.getElementById('sec-' + id).classList.add('active');
   const nb = document.getElementById('nav-' + id);
   if (nb) nb.classList.add('active');
+  // Sync mobile bottom nav
+  document.querySelectorAll('#mobile-nav button').forEach(b => {
+    b.style.color = 'var(--text2)';
+  });
+  const mnb = document.getElementById('mnav-' + id);
+  if (mnb) mnb.style.color = 'var(--blue)';
   if (id === 'archive') renderArchive();
   if (id === 'vault') loadVaultNotes().then(() => renderVaultEntries());
   if (id === 'dashboard') renderDashboard();
