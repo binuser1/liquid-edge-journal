@@ -1,362 +1,941 @@
-
 <!doctype html>
-<html lang="en" class="h-full" data-theme="light">
+<html lang="en" class="h-full">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Liquid Edge Trading Journal</title>
+    <title>Liquid Edge — Trading Journal</title>
 
-    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
-    <script src="./firebase-config.js"></script>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="./style.css" />
-    <script defer src="./deriv-config.js"></script>
-    <script defer src="./chart-embed.js"></script>
-    <script defer src="./trade-tracker.js"></script>
-    <script defer src="./guardian-bridge.js"></script>
-    <script defer src="./script.js"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="./firebase-config.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+  :root{--bg:#f0f2f7;--surface:#ffffff;--surface2:#f7f8fc;--border:#e4e8f0;--text:#0f1623;--text2:#6b7280;--blue:#3B82F6;--blue-dim:#dbeafe;--green:#00d4a0;--green-dim:#d1faf0;--red:#ff2d55;--red-dim:#ffe0e6;--yellow:#f59e0b;--sidebar-w:64px;--header-h:56px;}
+  .dark{--bg:#080d1a;--surface:rgba(255,255,255,0.05);--surface2:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.08);--text:#e8edf8;--text2:#7b8aaa;--blue-dim:rgba(59,130,246,0.15);--green-dim:rgba(0,212,160,0.15);--red-dim:rgba(255,45,85,0.15);}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
+  body{display:flex;flex-direction:column;overflow:hidden;}
+  ::-webkit-scrollbar{width:4px;height:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transition:box-shadow 0.2s,border-color 0.2s;}
+  .dark .card{box-shadow:0 0 0 1px rgba(255,255,255,0.04),0 8px 32px rgba(0,0,0,0.4);}
+  .card:hover{box-shadow:0 4px 24px rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.25);}
+  #header{height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 16px;z-index:50;flex-shrink:0;backdrop-filter:blur(20px);transition:background 0.3s,border-color 0.3s;}
+  #sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0;z-index:40;transition:background 0.3s,border-color 0.3s;}
+  .nav-btn{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;cursor:pointer;transition:background 0.15s,color 0.15s;color:var(--text2);position:relative;}
+  .nav-btn:hover{background:var(--blue-dim);color:var(--blue);}.nav-btn.active{background:var(--blue-dim);color:var(--blue);}
+  .nav-btn .tooltip{position:absolute;left:54px;background:var(--text);color:var(--surface);font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity 0.15s;z-index:100;}
+  .nav-btn:hover .tooltip{opacity:1;}
+  #main-wrap{display:flex;flex:1;overflow:hidden;}
+  #content{flex:1;overflow-y:auto;overflow-x:hidden;padding:24px;}
+  .section{display:none;}.section.active{display:block;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;transition:all 0.2s;position:relative;overflow:hidden;}
+  .stat-val{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;line-height:1;}
+  .stat-label{font-size:12px;color:var(--text2);font-weight:500;letter-spacing:0.5px;text-transform:uppercase;margin-top:6px;}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;}
+  .badge-win{background:var(--green-dim);color:var(--green);}.badge-loss{background:var(--red-dim);color:var(--red);}.badge-blue{background:var(--blue-dim);color:var(--blue);}
+  .chip{display:inline-flex;align-items:center;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;border:1.5px solid var(--border);cursor:pointer;transition:all 0.15s;color:var(--text2);background:var(--surface2);}
+  .chip:hover{border-color:var(--blue);color:var(--blue);}.chip.selected{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .le-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:10px 14px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.15s,background 0.15s;}
+  .le-input:focus{border-color:var(--blue);background:var(--surface);}.le-input::placeholder{color:var(--text2);}
+  label.le-label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;}
+  .outcome-toggle{display:flex;gap:8px;}
+  .outcome-btn{flex:1;padding:10px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;border:2px solid var(--border);background:var(--surface2);color:var(--text2);transition:all 0.15s;}
+  .outcome-btn.win.active{background:var(--green-dim);border-color:var(--green);color:var(--green);}
+  .outcome-btn.loss.active{background:var(--red-dim);border-color:var(--red);color:var(--red);}
+  .toggle-switch{position:relative;display:inline-block;width:48px;height:26px;}
+  .toggle-switch input{opacity:0;width:0;height:0;}
+  .toggle-slider{position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:26px;transition:0.25s;}
+  .toggle-slider:before{content:'';position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:white;border-radius:50%;transition:0.25s;box-shadow:0 2px 4px rgba(0,0,0,0.2);}
+  input:checked+.toggle-slider{background:var(--blue);}input:checked+.toggle-slider:before{transform:translateX(22px);}
+  .checklist-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);transition:border-color 0.2s;}
+  .checklist-row.checked{border-color:var(--green);background:var(--green-dim);}
+  .checklist-row .cl-label{font-size:14px;font-weight:500;color:var(--text);}
+  #guardian-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:600;transition:background 0.3s,border-color 0.3s;border:1.5px solid;}
+  #guardian-bar.green{background:var(--green-dim);border-color:var(--green);color:var(--green);}
+  #guardian-bar.red{background:var(--red-dim);border-color:var(--red);color:var(--red);}
+  #guardian-bar.yellow{background:rgba(245,158,11,0.12);border-color:var(--yellow);color:var(--yellow);}
+  #drop-zone{border:2px dashed var(--border);border-radius:12px;padding:32px 16px;text-align:center;cursor:pointer;transition:all 0.2s;color:var(--text2);background:var(--surface2);}
+  #drop-zone.drag-over{border-color:var(--blue);background:var(--blue-dim);color:var(--blue);}
+  #drop-zone.has-file{border-color:var(--green);background:var(--green-dim);}
+  .trade-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;}
+  .trade-card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(59,130,246,0.12);border-color:rgba(59,130,246,0.3);}
+  .trade-card .chart-thumb{width:100%;height:80px;background:linear-gradient(135deg,var(--blue-dim),var(--surface2));border-radius:8px;margin-bottom:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .month-tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px;}
+  .month-tab{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;color:var(--text2);border:1.5px solid transparent;}
+  .month-tab:hover{background:var(--blue-dim);color:var(--blue);}.month-tab.active{background:var(--blue);color:white;}
+  .filter-pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;color:var(--text2);border:1.5px solid var(--border);}
+  .filter-pill:hover{border-color:var(--blue);color:var(--blue);}.filter-pill.active{background:var(--blue);border-color:var(--blue);color:white;}
+  #modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:16px;}
+  #modal-overlay.open{display:flex;}
+  #modal-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:560px;max-height:85%;overflow-y:auto;padding:28px;box-shadow:0 32px 80px rgba(0,0,0,0.3);}
+  .btn-primary{padding:11px 24px;border-radius:10px;font-weight:700;font-size:14px;background:var(--blue);color:white;cursor:pointer;border:none;transition:opacity 0.15s,transform 0.1s;font-family:'DM Sans',sans-serif;}
+  .btn-primary:hover{opacity:0.9;transform:translateY(-1px);}.btn-primary:active{transform:translateY(0);}.btn-primary:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
+  .btn-danger{background:var(--red-dim);color:var(--red);border:1.5px solid var(--red-dim);padding:9px 18px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;transition:background 0.15s;font-family:'DM Sans',sans-serif;}
+  .btn-danger:hover{background:var(--red);color:white;}
+  .btn-ghost{padding:9px 18px;border-radius:10px;font-weight:600;font-size:13px;background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);cursor:pointer;transition:all 0.15s;font-family:'DM Sans',sans-serif;}
+  .btn-ghost:hover{border-color:var(--blue);color:var(--blue);}
+  #auth-bar input{background:var(--surface2);border:1.5px solid var(--border);color:var(--text);border-radius:8px;padding:7px 12px;font-size:13px;outline:none;transition:border-color 0.15s;width:140px;font-family:'DM Sans',sans-serif;}
+  #auth-bar input:focus{border-color:var(--blue);}#auth-bar input::placeholder{color:var(--text2);}
+  .sparkline{display:flex;align-items:flex-end;gap:3px;height:40px;}
+  .spark-bar{width:6px;border-radius:3px 3px 0 0;transition:height 0.4s ease;}
+  .pnl-bar-wrap{display:flex;flex-direction:column;gap:8px;}
+  .pnl-bar-row{display:flex;align-items:center;gap:10px;}
+  .pnl-bar-track{flex:1;background:var(--surface2);border-radius:4px;height:8px;overflow:hidden;border:1px solid var(--border);}
+  .pnl-bar-fill{height:100%;border-radius:4px;transition:width 0.6s cubic-bezier(0.34,1.56,0.64,1);}
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 32px;text-align:center;color:var(--text2);gap:12px;}
+  .empty-icon{width:64px;height:64px;background:var(--blue-dim);border-radius:20px;display:flex;align-items:center;justify-content:center;color:var(--blue);}
+  .donut-wrap{position:relative;width:120px;height:120px;}.donut-wrap svg{transform:rotate(-90deg);}
+  .donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .dot-glow{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .dot-green{background:var(--green);box-shadow:0 0 8px var(--green);}
+  .dot-red{background:var(--red);box-shadow:0 0 8px var(--red);}
+  .dot-yellow{background:var(--yellow);box-shadow:0 0 8px var(--yellow);}
+  .section.active{animation:fadeIn 0.2s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  *{transition:background 0.25s,color 0.2s,border-color 0.2s;}
+  @media(max-width:640px){:root{--sidebar-w:0px;}#sidebar{display:none;}#content{padding:16px;}#auth-bar input{width:100px;}}
+  </style>
   </head>
   <body>
-    <div class="mesh-bg" aria-hidden="true"></div>
-    <div class="app-shell">
-      <nav class="sidebar" aria-label="Folder navigation">
-        <div class="sidebar-logo" aria-label="Liquid Edge Logo">LE</div>
-        <button class="nav-folder active" id="nav-backtest" aria-label="Backtesting" title="Backtesting">
-          <i data-lucide="flask-conical" style="width: 20px; height: 20px"></i>
-          <span>Back</span>
-        </button>
-        <button class="nav-folder" id="nav-demo" aria-label="Demo" title="Demo Trading">
-          <i data-lucide="monitor" style="width: 20px; height: 20px"></i>
-          <span>Demo</span>
-        </button>
-        <button class="nav-folder" id="nav-real" aria-label="Real-Life Trading" title="Real-Life Trading">
-          <i data-lucide="trending-up" style="width: 20px; height: 20px"></i>
-          <span>Real</span>
-        </button>
-        <div class="sidebar-spacer"></div>
-        <button class="nav-folder" aria-label="Settings" title="Settings">
-          <i data-lucide="settings-2" style="width: 20px; height: 20px"></i>
-        </button>
-      </nav>
-      <div class="main-content">
-        <header class="topbar">
-          <h1 class="app-title" id="appTitleEl">Liquid Edge Trading Journal</h1>
-          <div class="topbar-spacer"></div>
-          <div class="auth-panel" id="authPanel" aria-label="Authentication controls">
-            <input class="auth-input" id="authEmail" type="email" placeholder="Email" autocomplete="email" />
-            <input class="auth-input" id="authPassword" type="password" placeholder="Password" autocomplete="current-password" />
-            <button class="auth-btn" id="signInBtn" type="button">Sign In</button>
-            <button class="auth-btn" id="signUpBtn" type="button">Sign Up</button>
-            <button class="auth-btn ghost" id="signOutBtn" type="button">Sign Out</button>
-            <span class="auth-status" id="authStatus">Not signed in</span>
-          </div>
-          <button class="theme-toggle" id="themeToggle" aria-label="Toggle Light/Dark theme">
-            <div class="morph-dot"></div>
-            <span id="themeLabel">Dark Mode</span>
-          </button>
-        </header>
-        <div class="scroll-area">
-          <div class="glass card-section" style="margin-bottom: 16px">
-            <div class="section-label">Market Selector</div>
-            <div class="market-scroll" id="marketScroll" role="listbox" aria-label="Market selector"></div>
-          </div>
-
-          <div class="journal-grid">
-            <div style="display: flex; flex-direction: column; gap: 16px">
-              <div class="glass card-section">
-                <div class="section-label">Sniper Checklist</div>
-
-                <div class="checklist-row">
-                  <label for="chk1" id="lbl-chk1">4H Zone Identified?</label>
-                  <div class="liquid-toggle">
-                    <span class="toggle-label" id="chk1-lbl">No</span>
-                    <div class="track" id="track1" role="switch" aria-checked="false" tabindex="0">
-                      <input type="checkbox" id="chk1" />
-                      <div class="thumb"></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="checklist-row">
-                  <label for="chk2" id="lbl-chk2">Equal Highs/Lows Identified?</label>
-                  <div class="liquid-toggle">
-                    <span class="toggle-label" id="chk2-lbl">No</span>
-                    <div class="track" id="track2" role="switch" aria-checked="false" tabindex="0">
-                      <input type="checkbox" id="chk2" />
-                      <div class="thumb"></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="checklist-row">
-                  <label for="chk3" id="lbl-chk3">15m Liquidity Sweep Confirmed?</label>
-                  <div class="liquid-toggle">
-                    <span class="toggle-label" id="chk3-lbl">No</span>
-                    <div class="track" id="track3" role="switch" aria-checked="false" tabindex="0">
-                      <input type="checkbox" id="chk3" />
-                      <div class="thumb"></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="checklist-row">
-                  <label for="chk4" id="lbl-chk4">Target Level Identified?</label>
-                  <div class="liquid-toggle">
-                    <span class="toggle-label" id="chk4-lbl">No</span>
-                    <div class="track" id="track4" role="switch" aria-checked="false" tabindex="0">
-                      <input type="checkbox" id="chk4" />
-                      <div class="thumb"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="glass card-section">
-                <div class="section-label">Live Trading Chart</div>
-                <div class="chart-header">
-                  <select id="symbol-selector" class="symbol-selector" aria-label="Select trading symbol">
-                    <option value="R_75">Volatility 75</option>
-                    <option value="R_100">Volatility 100</option>
-                    <option value="BOOM_1000">Boom 1000</option>
-                    <option value="BOOM_500">Boom 500</option>
-                    <option value="BOOM_300">Boom 300</option>
-                    <option value="CRASH_1000">Crash 1000</option>
-                    <option value="CRASH_500">Crash 500</option>
-                    <option value="CRASH_300">Crash 300</option>
-                    <option value="R_10">Volatility 10</option>
-                    <option value="R_25">Volatility 25</option>
-                    <option value="R_50">Volatility 50</option>
-                  </select>
-                  <div class="chart-auth">
-                    <button id="connect-deriv" class="connect-btn" aria-label="Connect Deriv account">
-                      <span class="btn-icon">🔗</span>
-                      <span class="btn-text">Connect Deriv</span>
-                    </button>
-                    <div id="deriv-status" class="deriv-status" aria-live="polite">Not connected</div>
-                  </div>
-                </div>
-                <div id="deriv-chart-container" class="deriv-chart" role="img" aria-label="Live trading chart">
-                  <div class="chart-placeholder">
-                    <div class="placeholder-icon">📈</div>
-                    <p>Connect your Deriv account to view live charts</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="glass card-section">
-                <div class="section-label">Chart Upload (Optional)</div>
-                <div
-                  class="drop-zone"
-                  id="dropZone"
-                  tabindex="0"
-                  role="button"
-                  aria-label="Drop chart screenshot here or click to upload"
-                >
-                  <input type="file" id="fileInput" accept="image/*" aria-label="Upload chart screenshot" />
-                  <div class="dz-inner" id="dzInner">
-                    <div class="dz-icon-wrap">
-                      <i data-lucide="upload-cloud" class="dz-icon" style="width: 26px; height: 26px"></i>
-                    </div>
-                    <div class="dz-text">
-                      <strong>Drop chart screenshot</strong><br />
-                      or click to browse
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 16px">
-              <div class="glass card-section" style="flex: 1">
-                <div class="section-label">Mental Vault</div>
-                <textarea
-                  class="vault-textarea"
-                  id="vaultText"
-                  placeholder="Pour your thoughts here — no judgment, pure clarity..."
-                  aria-label="Trading journal notes"
-                  rows="8"
-                ></textarea>
-                <div class="red-flag-warn" id="redFlagWarn" role="alert">
-                  ⚠ Red Flag Detected — Emotional language found. Pause &amp; reassess.
-                </div>
-              </div>
-
-              <div class="glass card-section">
-                <div class="section-label">Trade Details</div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px">
-                  <div>
-                    <label
-                      for="entryPrice"
-                      style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px"
-                      >Entry Price</label
-                    >
-                    <input
-                      type="number"
-                      id="entryPrice"
-                      placeholder="0.00"
-                      style="width: 100%; padding: 9px 12px; border-radius: 12px; border: 1.5px solid var(--glass-border); background: var(--input-bg); color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.3s"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      for="exitPrice"
-                      style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px"
-                      >Exit Price</label
-                    >
-                    <input
-                      type="number"
-                      id="exitPrice"
-                      placeholder="0.00"
-                      style="width: 100%; padding: 9px 12px; border-radius: 12px; border: 1.5px solid var(--glass-border); background: var(--input-bg); color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.3s"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      for="stopLoss"
-                      style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px"
-                      >Stop Loss</label
-                    >
-                    <input
-                      type="number"
-                      id="stopLoss"
-                      placeholder="0.00"
-                      style="width: 100%; padding: 9px 12px; border-radius: 12px; border: 1.5px solid var(--glass-border); background: var(--input-bg); color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.3s"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      for="takeProfit"
-                      style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px"
-                      >Take Profit</label
-                    >
-                    <input
-                      type="number"
-                      id="takeProfit"
-                      placeholder="0.00"
-                      style="width: 100%; padding: 9px 12px; border-radius: 12px; border: 1.5px solid var(--glass-border); background: var(--input-bg); color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.3s"
-                    />
-                  </div>
-                </div>
-
-                <div style="margin-bottom: 12px">
-                  <div class="section-label" style="margin-bottom: 8px">Outcome</div>
-                  <div class="outcome-toggle" role="group" aria-label="Trade outcome">
-                    <button class="outcome-btn active" type="button" id="outcomeWinBtn" data-outcome="win">Win</button>
-                    <button class="outcome-btn" type="button" id="outcomeLossBtn" data-outcome="loss">Loss</button>
-                  </div>
-                </div>
-                <button class="save-btn" id="saveBtn" aria-label="Save trade entry">Save Trade Entry</button>
-                <div class="save-status" id="saveStatus" aria-live="polite"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="glass archive-section" id="archiveSection">
-            <div class="section-label">📊 Historical Trade Archive</div>
-            <div class="winrate-row" id="winRateRow" aria-label="Win rate">
-              <span class="winrate-label">Win Rate</span>
-              <span class="winrate-value" id="winRateValue">—</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px">
-              <div class="timeline-nav" id="timelineNav" role="listbox" aria-label="Month selector"></div>
-              <div class="view-toggle-group" style="flex-shrink: 0">
-                <button class="view-toggle active" data-view="daily" aria-pressed="true">Daily</button>
-                <button class="view-toggle" data-view="weekly" aria-pressed="false">Weekly</button>
-              </div>
-            </div>
-            <div class="filter-pills" id="filterPills" role="group" aria-label="Folder filter">
-              <button class="filter-pill active" data-folder="all" aria-pressed="true">All</button>
-              <button class="filter-pill" data-folder="backtest" aria-pressed="false">Backtest</button>
-              <button class="filter-pill" data-folder="demo" aria-pressed="false">Demo</button>
-              <button class="filter-pill" data-folder="real" aria-pressed="false">Real</button>
-            </div>
-            <div class="trade-gallery" id="tradeGallery" role="grid" aria-label="Trade history gallery"></div>
-          </div>
-        </div>
-
-        <div class="guardian-bar-wrap" role="status" aria-live="polite" aria-label="Guardian status bar">
-          <div class="guardian-label-row">
-            <span class="guardian-title">⚔ THE GUARDIAN</span>
-            <span class="guardian-status safe" id="guardianStatus">Awaiting conditions…</span>
-          </div>
-          <div class="guardian-track" aria-label="Completion progress">
-            <div class="guardian-fill" id="guardianFill"></div>
-          </div>
-        </div>
-      </div>
+  <!-- HEADER -->
+  <header id="header">
+   <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+    <div style="width:32px;height:32px;background:var(--blue);border-radius:9px;display:flex;align-items:center;justify-content:center;">
+     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
     </div>
-
-    <div class="modal-overlay" id="tradeModal">
-      <div class="modal-glass">
-        <div class="modal-header">
-          <div>
-            <div class="modal-title" id="modalTitle">Trade Details</div>
-            <div id="modalMarketTag" class="modal-market-tag">VIX 100s</div>
-          </div>
-          <button class="modal-close" id="modalCloseBtn" aria-label="Close modal">
-            <i data-lucide="x" style="width: 18px; height: 18px"></i>
-          </button>
+    <span style="font-size:16px;font-weight:700;letter-spacing:-0.3px;">Liquid Edge</span>
+   </div>
+   <div id="guardian-bar" class="red" style="flex:1;max-width:320px;margin:0 12px;">
+    <span class="dot-glow dot-red" id="guardian-dot"></span>
+    <span id="guardian-text">Checklist incomplete — not ready to trade</span>
+   </div>
+   <div style="flex:1;"></div>
+   <div id="auth-bar" style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+    <input type="email" id="auth-email" placeholder="Email" autocomplete="off">
+    <input type="password" id="auth-pass" placeholder="Password">
+    <button class="btn-primary" id="btn-signin" style="padding:7px 14px;font-size:13px;" onclick="handleAuth('signin')">Sign In</button>
+    <button class="btn-ghost" id="btn-signup" style="padding:7px 14px;font-size:13px;" onclick="handleAuth('signup')">Sign Up</button>
+    <button class="btn-ghost" id="btn-signout" style="display:none;padding:7px 14px;font-size:13px;" onclick="handleAuth('signout')">Sign Out</button>
+    <span id="auth-status" style="font-size:12px;color:var(--text2);white-space:nowrap;"></span>
+   </div>
+   <button id="darkmode-btn" onclick="toggleDark()" title="Toggle dark mode" style="width:36px;height:36px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);flex-shrink:0;">
+    <i data-lucide="moon" style="width:16px;height:16px;"></i>
+   </button>
+  </header>
+  <!-- MAIN -->
+  <div id="main-wrap">
+   <!-- SIDEBAR -->
+   <nav id="sidebar">
+    <div class="nav-btn active" onclick="navigate('dashboard')" id="nav-dashboard"><i data-lucide="layout-dashboard" style="width:20px;height:20px;"></i><span class="tooltip">Dashboard</span></div>
+    <div class="nav-btn" onclick="navigate('new-trade')" id="nav-new-trade"><i data-lucide="plus-circle" style="width:20px;height:20px;"></i><span class="tooltip">New Trade</span></div>
+    <div class="nav-btn" onclick="navigate('archive')" id="nav-archive"><i data-lucide="archive" style="width:20px;height:20px;"></i><span class="tooltip">Archive</span></div>
+    <div class="nav-btn" onclick="navigate('vault')" id="nav-vault"><i data-lucide="brain" style="width:20px;height:20px;"></i><span class="tooltip">Mental Vault</span></div>
+    <div style="flex:1;"></div>
+    <div class="nav-btn" onclick="navigate('new-trade')" style="background:var(--blue);color:white;" title="New Trade"><i data-lucide="zap" style="width:18px;height:18px;"></i><span class="tooltip">Quick Trade</span></div>
+   </nav>
+   <!-- CONTENT -->
+   <main id="content">
+    <!-- DASHBOARD -->
+    <section id="sec-dashboard" class="section active">
+     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div><h1 style="font-size:22px;font-weight:700;letter-spacing:-0.4px;">Performance Overview</h1><p style="font-size:13px;color:var(--text2);margin-top:2px;">Your trading performance at a glance</p></div>
+      <span style="font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace;" id="dash-date"></span>
+     </div>
+     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-val" style="color:var(--blue);" id="stat-winrate">0%</div><div class="stat-label">Win Rate</div><div style="margin-top:12px;"><div class="sparkline" id="sparkline-wr"></div></div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-trades">0</div><div class="stat-label">Total Trades</div><div style="margin-top:12px;display:flex;gap:6px;align-items:center;" id="win-loss-badges"><span class="badge badge-win">0 W</span><span class="badge badge-loss">0 L</span></div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green);" id="stat-pnl">$0.00</div><div class="stat-label">Total P&amp;L</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-streak">0</div><div class="stat-label">Win Streak</div></div>
+     </div>
+     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div class="card" style="padding:20px;">
+       <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">Win / Loss Ratio</div>
+       <div style="display:flex;align-items:center;gap:20px;">
+        <div class="donut-wrap">
+         <svg width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="48" fill="none" stroke="var(--red-dim)" stroke-width="14"/><circle cx="60" cy="60" r="48" fill="none" stroke="var(--green)" stroke-width="14" stroke-dasharray="301.6" id="donut-arc" stroke-dashoffset="301.6" stroke-linecap="round"/></svg>
+         <div class="donut-center"><span style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--green);" id="donut-pct">0%</span><span style="font-size:10px;color:var(--text2);font-weight:600;">WIN</span></div>
         </div>
-        <div class="modal-body">
-          <div class="modal-section">
-            <div id="modalChartContainer" class="modal-chart">Chart Preview</div>
-          </div>
-          <div class="modal-section">
-            <div class="modal-section-label">Trade Metrics</div>
-            <div class="modal-details-grid">
-              <div class="detail-item">
-                <div class="detail-label">Entry</div>
-                <div class="detail-value" id="modalEntry">—</div>
-              </div>
-              <div class="detail-item">
-                <div class="detail-label">Exit</div>
-                <div class="detail-value" id="modalExit">—</div>
-              </div>
-              <div class="detail-item">
-                <div class="detail-label">Stop Loss</div>
-                <div class="detail-value" id="modalSL">—</div>
-              </div>
-              <div class="detail-item">
-                <div class="detail-label">Take Profit</div>
-                <div class="detail-value" id="modalTP">—</div>
-              </div>
-            </div>
-          </div>
-          <div class="modal-section">
-            <div class="modal-section-label">Sniper Checklist</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
-              <div class="detail-item"><span id="modalChk1">4H Zone: <strong>—</strong></span></div>
-              <div class="detail-item"><span id="modalChk2">Equal H/L: <strong>—</strong></span></div>
-              <div class="detail-item"><span id="modalChk3">Sweep: <strong>—</strong></span></div>
-              <div class="detail-item"><span id="modalChk4">Target: <strong>—</strong></span></div>
-            </div>
-          </div>
-          <div class="modal-section">
-            <div class="modal-section-label">Mental Vault</div>
-            <div class="modal-notes" id="modalNotes">—</div>
-          </div>
-          <div class="modal-section">
-            <div class="modal-section-label">Metadata</div>
-            <div class="detail-item">
-              <div class="detail-label">Created</div>
-              <div class="detail-value" id="modalTimestamp">—</div>
-            </div>
-          </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+         <div><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;"><div style="width:10px;height:10px;background:var(--green);border-radius:3px;"></div><span style="font-size:12px;color:var(--text2);">Wins</span></div><span style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;" id="donut-wins">0</span></div>
+         <div><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;"><div style="width:10px;height:10px;background:var(--red);border-radius:3px;"></div><span style="font-size:12px;color:var(--text2);">Losses</span></div><span style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;" id="donut-losses">0</span></div>
         </div>
-        <div class="modal-footer">
-          <button class="modal-btn" id="modalExportBtn">📥 Export</button>
-          <button class="modal-btn danger" id="modalDeleteBtn">🗑 Delete</button>
-        </div>
+       </div>
       </div>
+      <div class="card" style="padding:20px;">
+       <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">P&amp;L by Market</div>
+       <div class="pnl-bar-wrap" id="pnl-market-bars"><p style="font-size:12px;color:var(--text2);">No data yet</p></div>
+      </div>
+     </div>
+     <div class="card" style="padding:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+       <div style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Recent Trades</div>
+       <button class="btn-ghost" style="font-size:12px;padding:5px 12px;" onclick="navigate('archive')">View All</button>
+      </div>
+      <div style="overflow-x:auto;">
+       <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">
+         <th style="text-align:left;padding:8px 10px;font-weight:600;">Market</th>
+         <th style="text-align:left;padding:8px 10px;font-weight:600;">Date</th>
+         <th style="text-align:left;padding:8px 10px;font-weight:600;">Entry</th>
+         <th style="text-align:left;padding:8px 10px;font-weight:600;">Exit</th>
+         <th style="text-align:left;padding:8px 10px;font-weight:600;">P&amp;L</th>
+         <th style="text-align:left;padding:8px 10px;font-weight:600;">Outcome</th>
+        </tr></thead>
+        <tbody id="recent-tbody"></tbody>
+       </table>
+      </div>
+     </div>
+    </section>
+    <!-- NEW TRADE -->
+    <section id="sec-new-trade" class="section">
+     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div><h1 style="font-size:22px;font-weight:700;letter-spacing:-0.4px;">New Trade Entry</h1><p style="font-size:13px;color:var(--text2);margin-top:2px;">Log a new trade to your journal</p></div>
+     </div>
+     <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+       <div class="card" style="padding:18px;">
+        <label class="le-label">Select Market</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;" id="market-chips">
+         <div class="chip" data-market="VOL10" onclick="selectMarket(this)">Volatility 10 Index</div>
+         <div class="chip" data-market="VOL101S" onclick="selectMarket(this)">Volatility 10 (1s) Index</div>
+         <div class="chip" data-market="VOL151S" onclick="selectMarket(this)">Volatility 15 (1s) Index</div>
+         <div class="chip" data-market="VOL25" onclick="selectMarket(this)">Volatility 25 Index</div>
+         <div class="chip" data-market="VOL251S" onclick="selectMarket(this)">Volatility 25 (1s) Index</div>
+         <div class="chip" data-market="VOL301S" onclick="selectMarket(this)">Volatility 30 (1s) Index</div>
+         <div class="chip" data-market="VOL50" onclick="selectMarket(this)">Volatility 50 Index</div>
+         <div class="chip" data-market="VOL501S" onclick="selectMarket(this)">Volatility 50 (1s) Index</div>
+         <div class="chip selected" data-market="VOL75" onclick="selectMarket(this)">Volatility 75 Index</div>
+         <div class="chip" data-market="VOL751S" onclick="selectMarket(this)">Volatility 75 (1s) Index</div>
+         <div class="chip" data-market="VOL901S" onclick="selectMarket(this)">Volatility 90 (1s) Index</div>
+         <div class="chip" data-market="VOL100" onclick="selectMarket(this)">Volatility 100 Index</div>
+         <div class="chip" data-market="VOL1001S" onclick="selectMarket(this)">Volatility 100 (1s) Index</div>
+        </div>
+       </div>
+       <div class="card" style="padding:18px;">
+        <label class="le-label">Trade Category</label>
+        <div style="display:flex;gap:8px;margin-top:4px;" id="category-chips">
+         <div class="chip selected" data-cat="Real" onclick="selectCategory(this)">Real</div>
+         <div class="chip" data-cat="Demo" onclick="selectCategory(this)">Demo</div>
+         <div class="chip" data-cat="Backtest" onclick="selectCategory(this)">Backtest</div>
+        </div>
+       </div>
+       <div class="card" id="prices-card" style="padding:18px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
+         <div><label class="le-label">Entry Price</label><input class="le-input" type="number" id="trade-entry" placeholder="1254.60" step="0.01"></div>
+         <div><label class="le-label">Exit Price</label><input class="le-input" type="number" id="trade-exit" placeholder="1268.40" step="0.01"></div>
+         <div><label class="le-label">Stop Loss</label><input class="le-input" type="number" id="trade-sl" placeholder="1248.00" step="0.01"></div>
+         <div><label class="le-label">Take Profit</label><input class="le-input" type="number" id="trade-tp" placeholder="1275.00" step="0.01"></div>
+        </div>
+       </div>
+       <div class="card" id="outcome-card" style="padding:18px;">
+        <label class="le-label">Outcome</label>
+        <div class="outcome-toggle" style="margin-top:6px;">
+         <button class="outcome-btn win active" id="btn-win" onclick="setOutcome('win')">✓ WIN</button>
+         <button class="outcome-btn loss" id="btn-loss" onclick="setOutcome('loss')">✗ LOSS</button>
+        </div>
+       </div>
+       <div class="card" style="padding:18px;">
+        <label class="le-label">Chart Screenshot</label>
+        <div id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
+         <i data-lucide="image" style="width:28px;height:28px;margin:0 auto 8px;display:block;"></i>
+         <p style="font-size:13px;font-weight:600;" id="drop-text">Drop chart here or click to upload</p>
+         <p style="font-size:11px;margin-top:4px;">PNG, JPG up to 5MB</p>
+        </div>
+        <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
+        <img id="chart-preview" style="display:none;width:100%;border-radius:10px;margin-top:10px;border:1px solid var(--border);">
+       </div>
+       <div class="card" style="padding:18px;">
+        <label class="le-label">Mental Vault Notes</label>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:8px;">Describe your pre-trade mindset and reasoning</p>
+        <textarea class="le-input" id="trade-notes" rows="4" placeholder="e.g. I identified a clean 4H zone, price swept equal lows at 15m..."></textarea>
+       </div>
+       <button class="btn-primary" id="save-trade-btn" onclick="saveTrade()" style="width:100%;padding:14px;font-size:15px;">Save Trade Entry</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;position:sticky;top:0;">
+       <div class="card" style="padding:18px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;"><i data-lucide="crosshair" style="width:16px;height:16px;color:var(--blue);"></i><span style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);">Sniper Checklist</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="checklist-container">
+         <div class="checklist-row" id="cl-row-0"><span class="cl-label" id="cl-label-0">4H Zone Identified?</span><label class="toggle-switch"><input type="checkbox" id="cl-0" onchange="updateChecklist()"><span class="toggle-slider"></span></label></div>
+         <div class="checklist-row" id="cl-row-1"><span class="cl-label" id="cl-label-1">15m Equal Highs/Lows Identified?</span><label class="toggle-switch"><input type="checkbox" id="cl-1" onchange="updateChecklist()"><span class="toggle-slider"></span></label></div>
+         <div class="checklist-row" id="cl-row-2"><span class="cl-label" id="cl-label-2">15m Liquidity Sweep Confirmed?</span><label class="toggle-switch"><input type="checkbox" id="cl-2" onchange="updateChecklist()"><span class="toggle-slider"></span></label></div>
+         <div class="checklist-row" id="cl-row-3"><span class="cl-label" id="cl-label-3">Bullish/Bearish Engulfing Spotted?</span><label class="toggle-switch"><input type="checkbox" id="cl-3" onchange="updateChecklist()"><span class="toggle-slider"></span></label></div>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--text2);" id="checklist-progress">0 / 4 conditions met</div>
+       </div>
+       <div class="card" style="padding:18px;">
+        <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:10px;">Guardian Status</div>
+        <div id="guardian-card" style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;background:var(--red-dim);border:1.5px solid var(--red);">
+         <span class="dot-glow dot-red" id="guardian-card-dot"></span>
+         <div><div style="font-size:13px;font-weight:700;color:var(--red);" id="guardian-card-title">Not Ready</div><div style="font-size:11px;color:var(--text2);margin-top:2px;" id="guardian-card-sub">Complete checklist to trade safely</div></div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </section>
+    <!-- ARCHIVE -->
+    <section id="sec-archive" class="section">
+     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div><h1 style="font-size:22px;font-weight:700;letter-spacing:-0.4px;">Trade Archive</h1><p style="font-size:13px;color:var(--text2);margin-top:2px;">Browse and filter your trading history</p></div>
+     </div>
+     <div class="month-tabs" style="margin-bottom:14px;">
+      <div class="month-tab active" data-month="ALL" onclick="filterMonth(this)">All Time</div>
+      <div class="month-tab" data-month="JAN" onclick="filterMonth(this)">Jan</div>
+      <div class="month-tab" data-month="FEB" onclick="filterMonth(this)">Feb</div>
+      <div class="month-tab" data-month="MAR" onclick="filterMonth(this)">Mar</div>
+      <div class="month-tab" data-month="APR" onclick="filterMonth(this)">Apr</div>
+      <div class="month-tab" data-month="MAY" onclick="filterMonth(this)">May</div>
+      <div class="month-tab" data-month="JUN" onclick="filterMonth(this)">Jun</div>
+      <div class="month-tab" data-month="JUL" onclick="filterMonth(this)">Jul</div>
+      <div class="month-tab" data-month="AUG" onclick="filterMonth(this)">Aug</div>
+      <div class="month-tab" data-month="SEP" onclick="filterMonth(this)">Sep</div>
+      <div class="month-tab" data-month="OCT" onclick="filterMonth(this)">Oct</div>
+      <div class="month-tab" data-month="NOV" onclick="filterMonth(this)">Nov</div>
+      <div class="month-tab" data-month="DEC" onclick="filterMonth(this)">Dec</div>
+     </div>
+     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <button class="filter-pill active" data-filter="All" onclick="filterArchive(this)">All</button>
+      <button class="filter-pill" data-filter="Backtest" onclick="filterArchive(this)">Backtest</button>
+      <button class="filter-pill" data-filter="Demo" onclick="filterArchive(this)">Demo</button>
+      <button class="filter-pill" data-filter="Real" onclick="filterArchive(this)">Real</button>
+      <button class="filter-pill" data-filter="win" onclick="filterArchive(this)">Wins Only</button>
+      <button class="filter-pill" data-filter="loss" onclick="filterArchive(this)">Losses Only</button>
+     </div>
+     <div id="archive-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;"></div>
+    </section>
+    <!-- MENTAL VAULT -->
+    <section id="sec-vault" class="section">
+     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div><h1 style="font-size:22px;font-weight:700;letter-spacing:-0.4px;">Mental Vault</h1><p style="font-size:13px;color:var(--text2);margin-top:2px;">Pre-trade psychology reflection &amp; emotional guardrails</p></div>
+     </div>
+     <div style="display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:start;">
+      <div>
+       <div class="card" style="padding:22px;margin-bottom:14px;">
+        <label class="le-label" style="margin-bottom:10px;">Today's Pre-Trade Journal</label>
+        <textarea class="le-input" id="vault-main-text" rows="10" style="font-size:14px;line-height:1.7;" placeholder="Write freely about your current emotional state, what you're seeing in the market, your plan for today..."></textarea>
+        <div style="display:flex;gap:10px;margin-top:14px;">
+         <button class="btn-primary" id="vault-save-btn" onclick="saveVaultNote()">Save Note</button>
+         <button class="btn-ghost" onclick="clearVault()">Clear</button>
+        </div>
+       </div>
+       <div class="card" style="padding:22px;">
+        <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:14px;">Past Journal Entries</div>
+        <div id="vault-entries-list"></div>
+       </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+       <div class="card" style="padding:18px;display:flex;flex-direction:column;max-height:600px;">
+        <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:12px;">Trading Mantras</div>
+        <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;font-size:13px;color:var(--text2);line-height:1.6;">
+         <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:8px;opacity:0.7;">Discipline</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+           <p style="padding-left:10px;border-left:3px solid var(--blue);margin:0;">"The market will always be there. Your capital won't."</p>
+           <p style="padding-left:10px;border-left:3px solid var(--blue);margin:0;">"Plan the trade. Trade the plan."</p>
+           <p style="padding-left:10px;border-left:3px solid var(--blue);margin:0;">"Patience is a position."</p>
+           <p style="padding-left:10px;border-left:3px solid var(--blue);margin:0;">"Sitting out IS a trade. Protect your edge."</p>
+           <p style="padding-left:10px;border-left:3px solid var(--blue);margin:0;">"A trade not taken is never a loss."</p>
+           <p style="padding-left:10px;border-left:3px solid var(--blue);margin:0;">"Discipline today. Profit tomorrow."</p>
+          </div>
+         </div>
+         <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:8px;opacity:0.7;">Break &amp; Retest</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+           <p style="padding-left:10px;border-left:3px solid var(--green);margin:0;">"Wait for the break. Wait for the retest. Then strike."</p>
+           <p style="padding-left:10px;border-left:3px solid var(--green);margin:0;">"Structure breaks without a retest are traps. Let price come to you."</p>
+           <p style="padding-left:10px;border-left:3px solid var(--green);margin:0;">"The retest is your permission slip to enter."</p>
+           <p style="padding-left:10px;border-left:3px solid var(--green);margin:0;">"If price doesn't come back, the setup wasn't yours."</p>
+           <p style="padding-left:10px;border-left:3px solid var(--green);margin:0;">"Break the level, retest the level, respect the level."</p>
+           <p style="padding-left:10px;border-left:3px solid var(--green);margin:0;">"Patience at the retest separates amateurs from professionals."</p>
+          </div>
+         </div>
+         <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:8px;opacity:0.7;">Risk &amp; Mindset</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+           <p style="padding-left:10px;border-left:3px solid var(--yellow);margin:0;">"One bad trade doesn't ruin you. One bad habit does."</p>
+           <p style="padding-left:10px;border-left:3px solid var(--yellow);margin:0;">"Your stop loss is your insurance. Never remove it."</p>
+           <p style="padding-left:10px;border-left:3px solid var(--yellow);margin:0;">"Size down when in doubt. Size up when confident."</p>
+          </div>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </section>
+   </main>
+  </div>
+  <!-- MODAL -->
+  <div id="modal-overlay" onclick="closeModalOnBg(event)">
+   <div id="modal-box">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+     <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;"><span style="font-size:18px;font-weight:700;" id="modal-market">—</span><span class="badge" id="modal-outcome-badge"></span></div>
+      <span style="font-size:12px;color:var(--text2);" id="modal-date"></span>
+     </div>
+     <button onclick="closeModal()" style="background:var(--surface2);border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
     </div>
+    <img id="modal-chart-img" style="display:none;width:100%;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);">
+    <div id="modal-chart-placeholder" style="width:100%;height:140px;background:linear-gradient(135deg,var(--blue-dim),var(--surface2));border-radius:12px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:13px;font-weight:500;border:1px solid var(--border);">Chart screenshot not available</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+     <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1px solid var(--border);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);font-weight:600;margin-bottom:4px;">Entry</div><div style="font-family:'JetBrains Mono',monospace;font-weight:600;font-size:14px;" id="modal-entry">—</div></div>
+     <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1px solid var(--border);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);font-weight:600;margin-bottom:4px;">Exit</div><div style="font-family:'JetBrains Mono',monospace;font-weight:600;font-size:14px;" id="modal-exit">—</div></div>
+     <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1px solid var(--border);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);font-weight:600;margin-bottom:4px;">Stop Loss</div><div style="font-family:'JetBrains Mono',monospace;font-weight:600;font-size:14px;" id="modal-sl">—</div></div>
+     <div style="background:var(--surface2);border-radius:10px;padding:12px;border:1px solid var(--border);"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);font-weight:600;margin-bottom:4px;">Take Profit</div><div style="font-family:'JetBrains Mono',monospace;font-weight:600;font-size:14px;" id="modal-tp">—</div></div>
+    </div>
+    <div style="margin-bottom:16px;">
+     <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:6px;">Notes</div>
+     <div style="background:var(--surface2);border-radius:10px;padding:12px;font-size:13px;line-height:1.7;border:1px solid var(--border);color:var(--text);" id="modal-notes">—</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+     <button class="btn-ghost" onclick="exportCSV(currentModalTrade)"><i data-lucide="download" style="width:14px;height:14px;display:inline;margin-right:4px;"></i>Export CSV</button>
+     <button class="btn-danger" id="modal-delete-btn" onclick="deleteTrade()"><i data-lucide="trash-2" style="width:14px;height:14px;display:inline;margin-right:4px;"></i>Delete Trade</button>
+     <button class="btn-ghost" onclick="closeModal()">Close</button>
+    </div>
+   </div>
+  </div>
+  <!-- TOAST -->
+  <div id="toast" style="position:fixed;bottom:24px;right:24px;background:var(--text);color:var(--surface);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;opacity:0;transform:translateY(10px);transition:all 0.3s;z-index:9999;pointer-events:none;max-width:300px;"></div>
+  <script>
+// ── STATE ──────────────────────────────────────────────────────────
+let isDark = false;
+let firestoreDb = null;
+let state = { user: null, trades: [], vaultNotes: [] };
+let currentFilter = 'All';
+let currentMonth = 'ALL';
+let currentModalTrade = null;
+let selectedMarket = 'VOL75';
+let selectedCategory = 'Real';
+let selectedOutcome = 'win';
+let checklistState = [false, false, false, false];
+let chartFile = null;
+
+const MARKET_MAP = {
+  VOL10:'Volatility 10 Index', VOL101S:'Volatility 10 (1s) Index', VOL151S:'Volatility 15 (1s) Index',
+  VOL25:'Volatility 25 Index', VOL251S:'Volatility 25 (1s) Index', VOL301S:'Volatility 30 (1s) Index',
+  VOL50:'Volatility 50 Index', VOL501S:'Volatility 50 (1s) Index', VOL75:'Volatility 75 Index',
+  VOL751S:'Volatility 75 (1s) Index', VOL901S:'Volatility 90 (1s) Index',
+  VOL100:'Volatility 100 Index', VOL1001S:'Volatility 100 (1s) Index'
+};
+
+// ── FIREBASE HELPERS ───────────────────────────────────────────────
+function ensureFirebase() {
+  if (!firestoreDb) {
+    if (!firebase.apps.length) firebase.initializeApp(window.FIREBASE_CONFIG);
+    firestoreDb = firebase.firestore();
+  }
+}
+
+async function withRetry(fn, retries = 3) {
+  let lastErr;
+  for (let i = 0; i < retries; i++) {
+    try { return await fn(); } catch(e) { lastErr = e; await new Promise(r => setTimeout(r, 500*(i+1))); }
+  }
+  throw lastErr;
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── AUTH ───────────────────────────────────────────────────────────
+async function handleAuth(action) {
+  const emailVal = document.getElementById('auth-email').value.trim();
+  const passVal = document.getElementById('auth-pass').value;
+  if (action === 'signout') { await firebase.auth().signOut(); return; }
+  if (!emailVal || !passVal) { showToast('⚠ Enter email and password'); return; }
+  try {
+    ensureFirebase();
+    if (action === 'signin') await firebase.auth().signInWithEmailAndPassword(emailVal, passVal);
+    else await firebase.auth().createUserWithEmailAndPassword(emailVal, passVal);
+  } catch(e) { showToast('⚠ ' + (e.message || 'Auth failed')); }
+}
+
+function updateAuthUI() {
+  const has = !!state.user;
+  document.getElementById('auth-email').style.display = has ? 'none' : '';
+  document.getElementById('auth-pass').style.display = has ? 'none' : '';
+  document.getElementById('btn-signin').style.display = has ? 'none' : '';
+  document.getElementById('btn-signup').style.display = has ? 'none' : '';
+  document.getElementById('btn-signout').style.display = has ? '' : 'none';
+  const st = document.getElementById('auth-status');
+  st.textContent = has ? '● ' + state.user.email : '';
+  st.style.color = has ? 'var(--green)' : '';
+}
+
+// ── DATA LOADING ───────────────────────────────────────────────────
+async function loadTrades() {
+  if (!state.user || !firestoreDb) return;
+  try {
+    const snap = await withRetry(() =>
+      firestoreDb.collection('trades').where('userId','==',state.user.id).orderBy('createdAt','desc').get()
+    );
+    state.trades = [];
+    snap.forEach(doc => {
+      const d = doc.data();
+      state.trades.push({
+        id: doc.id,
+        market: d.market || '',
+        cat: d.category || 'Real',
+        entry: d.entryPrice || null,
+        exit: d.exitPrice || null,
+        sl: d.stopLoss || null,
+        tp: d.takeProfit || null,
+        outcome: d.outcome || null,
+        date: d.tradeDate || (d.createdAt ? new Date(d.createdAt.toMillis()).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+        notes: d.notes || '',
+        chartUrl: d.chartBase64 || null
+      });
+    });
+  } catch(e) { showToast('⚠ Failed to load trades: ' + e.message); }
+}
+
+async function loadVaultNotes() {
+  if (!state.user || !firestoreDb) return;
+  try {
+    const snap = await withRetry(() =>
+      firestoreDb.collection('vaultNotes').where('userId','==',state.user.id).orderBy('createdAt','desc').get()
+    );
+    state.vaultNotes = [];
+    snap.forEach(doc => {
+      const d = doc.data();
+      state.vaultNotes.push({ id: doc.id, date: d.date, text: d.text });
+    });
+  } catch(e) { showToast('⚠ Failed to load journal entries'); }
+}
+
+async function refreshAll() {
+  await Promise.all([loadTrades(), loadVaultNotes()]);
+  renderDashboard();
+  if (document.getElementById('sec-archive').classList.contains('active')) renderArchive();
+  if (document.getElementById('sec-vault').classList.contains('active')) renderVaultEntries();
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────
+function navigate(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  const nb = document.getElementById('nav-' + id);
+  if (nb) nb.classList.add('active');
+  if (id === 'archive') renderArchive();
+  if (id === 'vault') loadVaultNotes().then(() => renderVaultEntries());
+  if (id === 'dashboard') renderDashboard();
+  lucide.createIcons();
+}
+
+// ── DARK MODE ─────────────────────────────────────────────────────
+function toggleDark() {
+  isDark = !isDark;
+  document.documentElement.classList.toggle('dark', isDark);
+  const btn = document.getElementById('darkmode-btn');
+  btn.innerHTML = isDark ? '<i data-lucide="sun" style="width:16px;height:16px;"></i>' : '<i data-lucide="moon" style="width:16px;height:16px;"></i>';
+  lucide.createIcons();
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────────
+function renderDashboard() {
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const trades = state.trades;
+  const realDemo = trades.filter(t => t.cat !== 'Backtest');
+  const wins = realDemo.filter(t => t.outcome === 'win').length;
+  const losses = realDemo.filter(t => t.outcome === 'loss').length;
+  const total = realDemo.length;
+  const wrPct = total > 0 ? ((wins / total) * 100).toFixed(1) : '0.0';
+  document.getElementById('stat-winrate').textContent = wrPct + '%';
+  document.getElementById('stat-trades').textContent = trades.length;
+  document.getElementById('win-loss-badges').innerHTML = `<span class="badge badge-win">${wins} W</span><span class="badge badge-loss">${losses} L</span>`;
+
+  let totalPnl = 0;
+  realDemo.forEach(t => { if (t.entry && t.exit) totalPnl += t.outcome==='win' ? Math.abs(t.exit-t.entry) : -Math.abs(t.exit-t.entry); });
+  const pnlEl = document.getElementById('stat-pnl');
+  pnlEl.textContent = (totalPnl >= 0 ? '+' : '') + '$' + Math.abs(totalPnl).toFixed(2);
+  pnlEl.style.color = totalPnl >= 0 ? 'var(--green)' : 'var(--red)';
+
+  let streak = 0;
+  for (const t of realDemo) { if (t.outcome === 'win') streak++; else break; }
+  document.getElementById('stat-streak').textContent = streak;
+
+  const pct = total > 0 ? wins/total : 0;
+  const circumference = 301.6;
+  document.getElementById('donut-arc').setAttribute('stroke-dashoffset', circumference - (circumference * pct));
+  document.getElementById('donut-pct').textContent = wrPct + '%';
+  document.getElementById('donut-wins').textContent = wins;
+  document.getElementById('donut-losses').textContent = losses;
+
+  renderPnlByMarket(realDemo);
+
+  const tbody = document.getElementById('recent-tbody');
+  const recent = [...trades].slice(0, 6);
+  tbody.innerHTML = '';
+  if (recent.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text2);font-size:13px;">No trades yet — log your first trade!</td></tr>';
+    return;
+  }
+  recent.forEach(t => {
+    const isBacktest = t.cat === 'Backtest';
+    const pnlText = (t.entry && t.exit && !isBacktest) ? ((t.outcome==='win'?'+':'-') + Math.abs(((t.exit-t.entry)/t.entry*100)).toFixed(2)+'%') : '—';
+    const pnlColor = t.outcome==='win' ? 'var(--green)' : t.outcome==='loss' ? 'var(--red)' : 'var(--text2)';
+    const row = document.createElement('tr');
+    row.style.cssText = 'border-top:1px solid var(--border);cursor:pointer;transition:background 0.15s;';
+    row.onmouseenter = () => row.style.background = 'var(--surface2)';
+    row.onmouseleave = () => row.style.background = '';
+    row.onclick = () => openModal(t);
+    row.innerHTML = `<td style="padding:10px;">${t.market}</td><td style="padding:10px;color:var(--text2);">${formatDate(t.date)}</td><td style="padding:10px;font-family:'JetBrains Mono',monospace;font-size:12px;">${t.entry||'—'}</td><td style="padding:10px;font-family:'JetBrains Mono',monospace;font-size:12px;">${t.exit||'—'}</td><td style="padding:10px;font-family:'JetBrains Mono',monospace;font-size:12px;color:${pnlColor};font-weight:600;">${pnlText}</td><td style="padding:10px;">${isBacktest?'<span class="badge badge-blue">BACKTEST</span>':`<span class="badge badge-${t.outcome||'blue'}">${(t.outcome||'').toUpperCase()}</span>`}</td>`;
+    tbody.appendChild(row);
+  });
+
+  const sl = document.getElementById('sparkline-wr');
+  sl.innerHTML = '';
+  realDemo.slice(0,10).reverse().forEach(t => {
+    const bar = document.createElement('div');
+    bar.className = 'spark-bar';
+    bar.style.cssText = `height:${t.outcome==='win'?80:30}%;background:${t.outcome==='win'?'var(--green)':'var(--red)'};flex:1;min-width:4px;`;
+    sl.appendChild(bar);
+  });
+}
+
+function renderPnlByMarket(trades) {
+  const wrap = document.getElementById('pnl-market-bars');
+  const map = {};
+  trades.forEach(t => {
+    if (!t.market || !t.entry || !t.exit) return;
+    const pnl = t.outcome==='win' ? Math.abs(t.exit-t.entry) : -Math.abs(t.exit-t.entry);
+    map[t.market] = (map[t.market] || 0) + pnl;
+  });
+  const entries = Object.entries(map).sort((a,b) => b[1]-a[1]);
+  if (entries.length === 0) { wrap.innerHTML = '<p style="font-size:12px;color:var(--text2);">No data yet</p>'; return; }
+  const maxAbs = Math.max(...entries.map(e => Math.abs(e[1])));
+  wrap.innerHTML = '';
+  entries.forEach(([market, pnl]) => {
+    const pct = maxAbs > 0 ? (Math.abs(pnl)/maxAbs*80) : 0;
+    const color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    const label = market.replace('Volatility ','V').replace(' Index','').replace(' (1s)','(1s)');
+    wrap.innerHTML += `<div class="pnl-bar-row"><span style="font-size:12px;color:var(--text2);width:60px;flex-shrink:0;">${label}</span><div class="pnl-bar-track"><div class="pnl-bar-fill" style="width:${pct}%;background:${color};"></div></div><span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:${color};width:60px;text-align:right;flex-shrink:0;">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(0)}</span></div>`;
+  });
+}
+
+// ── NEW TRADE ────────────────────────────────────────────────────
+function selectMarket(el) {
+  document.querySelectorAll('#market-chips .chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedMarket = el.dataset.market;
+}
+
+function selectCategory(el) {
+  document.querySelectorAll('#category-chips .chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCategory = el.dataset.cat;
+  const outcomeCard = document.getElementById('outcome-card');
+  const pricesCard = document.getElementById('prices-card');
+  const saveBtn = document.getElementById('save-trade-btn');
+  if (selectedCategory === 'Backtest') {
+    outcomeCard.style.display = 'none';
+    pricesCard.style.display = 'none';
+    saveBtn.textContent = 'Save Backtest';
+  } else {
+    outcomeCard.style.display = '';
+    pricesCard.style.display = '';
+    saveBtn.textContent = 'Save Trade Entry';
+  }
+}
+
+function setOutcome(o) {
+  selectedOutcome = o;
+  document.getElementById('btn-win').classList.toggle('active', o==='win');
+  document.getElementById('btn-loss').classList.toggle('active', o==='loss');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) loadChartPreview(file);
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) loadChartPreview(file);
+}
+
+function loadChartPreview(file) {
+  chartFile = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const preview = document.getElementById('chart-preview');
+    preview.src = ev.target.result;
+    preview.style.display = 'block';
+    document.getElementById('drop-zone').classList.add('has-file');
+    document.getElementById('drop-text').textContent = '✓ ' + file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── CHECKLIST + GUARDIAN ──────────────────────────────────────────
+function updateChecklist() {
+  checklistState = [0,1,2,3].map(i => document.getElementById('cl-'+i).checked);
+  const count = checklistState.filter(Boolean).length;
+  document.getElementById('checklist-progress').textContent = count + ' / 4 conditions met';
+  checklistState.forEach((checked, i) => document.getElementById('cl-row-'+i).classList.toggle('checked', checked));
+  updateGuardian();
+}
+
+function updateGuardian() {
+  const count = checklistState.filter(Boolean).length;
+  const all = count === 4;
+  const saveBtn = document.getElementById('save-trade-btn');
+  let bg, bc, tc, dotCls, title, sub, barText;
+  if (all) {
+    bg='var(--green-dim)'; bc='var(--green)'; tc='var(--green)'; dotCls='dot-green';
+    title='Ready to Trade'; sub='All conditions satisfied'; barText='All conditions met — ready to trade';
+  } else if (count > 0) {
+    bg='rgba(245,158,11,0.12)'; bc='var(--yellow)'; tc='var(--yellow)'; dotCls='dot-yellow';
+    title='Almost Ready'; sub=(4-count)+' item(s) remaining'; barText=count+'/4 checklist items complete';
+  } else {
+    bg='var(--red-dim)'; bc='var(--red)'; tc='var(--red)'; dotCls='dot-red';
+    title='Not Ready'; sub='Complete checklist to trade safely'; barText='Checklist incomplete — not ready to trade';
+  }
+  const bar = document.getElementById('guardian-bar');
+  bar.className = all?'green':count>0?'yellow':'red';
+  document.getElementById('guardian-text').textContent = barText;
+  document.getElementById('guardian-dot').className = 'dot-glow ' + dotCls;
+  const gc = document.getElementById('guardian-card');
+  gc.style.background = bg; gc.style.borderColor = bc;
+  document.getElementById('guardian-card-title').textContent = title;
+  document.getElementById('guardian-card-title').style.color = tc;
+  document.getElementById('guardian-card-sub').textContent = sub;
+  document.getElementById('guardian-card-dot').className = 'dot-glow ' + dotCls;
+  if (saveBtn) saveBtn.disabled = !all;
+}
+
+// ── SAVE TRADE ───────────────────────────────────────────────────
+async function saveTrade() {
+  if (!state.user) { showToast('⚠ Please sign in first'); return; }
+  const entryVal = parseFloat(document.getElementById('trade-entry').value);
+  const exitVal = parseFloat(document.getElementById('trade-exit').value);
+  const slVal = parseFloat(document.getElementById('trade-sl').value) || null;
+  const tpVal = parseFloat(document.getElementById('trade-tp').value) || null;
+  const notes = document.getElementById('trade-notes').value;
+  const preview = document.getElementById('chart-preview');
+  if (selectedCategory === 'Backtest') {
+    if (!chartFile && !notes.trim()) { showToast('⚠ Add a chart screenshot or notes for your backtest'); return; }
+  } else {
+    if (!entryVal || !exitVal) { showToast('⚠ Enter entry and exit prices'); return; }
+  }
+  const saveBtn = document.getElementById('save-trade-btn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving...';
+  try {
+    let chartBase64 = null;
+    if (chartFile) chartBase64 = await fileToBase64(chartFile);
+    await withRetry(() => firestoreDb.collection('trades').add({
+      userId: state.user.id,
+      market: MARKET_MAP[selectedMarket] || selectedMarket,
+      category: selectedCategory,
+      entryPrice: entryVal || null,
+      exitPrice: exitVal || null,
+      stopLoss: slVal,
+      takeProfit: tpVal,
+      outcome: selectedCategory === 'Backtest' ? null : selectedOutcome,
+      notes,
+      tradeDate: new Date().toISOString().split('T')[0],
+      chartBase64,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }));
+    showToast('✓ ' + (selectedCategory==='Backtest'?'Backtest':'Trade') + ' saved!');
+    document.getElementById('trade-entry').value = '';
+    document.getElementById('trade-exit').value = '';
+    document.getElementById('trade-sl').value = '';
+    document.getElementById('trade-tp').value = '';
+    document.getElementById('trade-notes').value = '';
+    preview.style.display = 'none'; preview.src = '';
+    document.getElementById('drop-zone').classList.remove('has-file');
+    document.getElementById('drop-text').textContent = 'Drop chart here or click to upload';
+    document.getElementById('file-input').value = '';
+    chartFile = null;
+    await loadTrades();
+    renderDashboard();
+  } catch(e) { showToast('⚠ Failed to save: ' + e.message); }
+  finally { updateGuardian(); saveBtn.textContent = selectedCategory==='Backtest'?'Save Backtest':'Save Trade Entry'; }
+}
+
+// ── ARCHIVE ──────────────────────────────────────────────────────
+function renderArchive() {
+  const grid = document.getElementById('archive-grid');
+  const filtered = state.trades.filter(t => {
+    const catMatch = currentFilter==='All' || currentFilter===t.cat || currentFilter===t.outcome;
+    const monthMatch = currentMonth==='ALL' || getMonthAbbr(t.date)===currentMonth;
+    return catMatch && monthMatch;
+  });
+  grid.innerHTML = '';
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon"><i data-lucide="inbox" style="width:28px;height:28px;"></i></div><p style="font-size:15px;font-weight:700;">No trades found</p><p style="font-size:13px;">Adjust filters or add a new trade</p></div>`;
+    lucide.createIcons(); return;
+  }
+  filtered.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'trade-card';
+    card.onclick = () => openModal(t);
+    const isBacktest = t.cat === 'Backtest';
+    const hasPrices = t.entry && t.exit;
+    const pnlPct = hasPrices && !isBacktest ? ((t.outcome==='win'?'+':'-') + Math.abs(((t.exit-t.entry)/t.entry*100)).toFixed(2)+'%') : '—';
+    const pnlColor = t.outcome==='win'?'var(--green)':t.outcome==='loss'?'var(--red)':'var(--text2)';
+    const badge = isBacktest ? `<span class="badge badge-blue">BACKTEST</span>` : `<span class="badge badge-${t.outcome||'blue'}">${(t.outcome||'').toUpperCase()}</span>`;
+    card.innerHTML = `<div class="chart-thumb">${t.chartUrl?`<img src="${t.chartUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`:`<svg width="48" height="32" viewBox="0 0 48 32" fill="none" style="opacity:0.4"><polyline points="0,28 8,18 16,22 24,8 32,14 40,4 48,10" stroke="var(--blue)" stroke-width="2" fill="none"/></svg>`}</div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;"><span style="font-weight:700;font-size:14px;">${t.market}</span>${badge}</div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span style="font-size:11px;color:var(--text2);">${formatDate(t.date)}</span><span class="badge badge-blue" style="font-size:10px;">${t.cat}</span></div><div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);margin-bottom:8px;"><span>E: ${t.entry||'—'}</span><span>X: ${t.exit||'—'}</span><span style="color:${pnlColor};font-weight:700;">${pnlPct}</span></div>${t.notes?`<p style="font-size:11px;color:var(--text2);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${t.notes}</p>`:''}`;
+    grid.appendChild(card);
+  });
+  lucide.createIcons();
+}
+
+function filterArchive(el) {
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  currentFilter = el.dataset.filter;
+  renderArchive();
+}
+
+function filterMonth(el) {
+  document.querySelectorAll('.month-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  currentMonth = el.dataset.month;
+  renderArchive();
+}
+
+function getMonthAbbr(dateStr) {
+  if (!dateStr) return 'JAN';
+  return ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][new Date(dateStr+'T00:00:00').getMonth()];
+}
+
+// ── MODAL ────────────────────────────────────────────────────────
+function openModal(trade) {
+  currentModalTrade = trade;
+  const isBacktest = trade.cat === 'Backtest';
+  document.getElementById('modal-market').textContent = trade.market;
+  document.getElementById('modal-date').textContent = formatDate(trade.date) + ' · ' + trade.cat;
+  document.getElementById('modal-entry').textContent = trade.entry || '—';
+  document.getElementById('modal-exit').textContent = trade.exit || '—';
+  document.getElementById('modal-sl').textContent = trade.sl || '—';
+  document.getElementById('modal-tp').textContent = trade.tp || '—';
+  document.getElementById('modal-notes').textContent = trade.notes || 'No notes recorded.';
+  const badge = document.getElementById('modal-outcome-badge');
+  badge.className = isBacktest ? 'badge badge-blue' : 'badge badge-' + (trade.outcome||'blue');
+  badge.textContent = isBacktest ? 'BACKTEST' : (trade.outcome||'').toUpperCase();
+  const img = document.getElementById('modal-chart-img');
+  const ph = document.getElementById('modal-chart-placeholder');
+  if (trade.chartUrl) { img.src = trade.chartUrl; img.style.display='block'; ph.style.display='none'; }
+  else { img.style.display='none'; ph.style.display='flex'; }
+  document.getElementById('modal-overlay').classList.add('open');
+  lucide.createIcons();
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); currentModalTrade = null; }
+function closeModalOnBg(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
+
+async function deleteTrade() {
+  if (!currentModalTrade) return;
+  const btn = document.getElementById('modal-delete-btn');
+  if (btn.dataset.confirm !== 'yes') {
+    btn.textContent = '⚠ Confirm Delete?';
+    btn.dataset.confirm = 'yes';
+    setTimeout(() => { btn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px;display:inline;margin-right:4px;"></i>Delete Trade'; btn.dataset.confirm=''; lucide.createIcons(); }, 3000);
+    return;
+  }
+  try {
+    await withRetry(() => firestoreDb.collection('trades').doc(String(currentModalTrade.id)).delete());
+    state.trades = state.trades.filter(t => t.id !== currentModalTrade.id);
+    closeModal(); renderArchive(); renderDashboard();
+    showToast('Trade deleted.');
+  } catch(e) { showToast('⚠ Failed to delete: ' + e.message); }
+}
+
+function exportCSV(trade) {
+  if (!trade) return;
+  const rows = [['Market','Category','Date','Entry','Exit','StopLoss','TakeProfit','Outcome','Notes'],[trade.market,trade.cat,trade.date,trade.entry||'',trade.exit||'',trade.sl||'',trade.tp||'',trade.outcome||'','"'+(trade.notes||'').replace(/"/g,'""')+'"']];
+  const blob = new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='trade_'+trade.id+'.csv'; a.click();
+  URL.revokeObjectURL(url); showToast('CSV exported!');
+}
+
+// ── VAULT ────────────────────────────────────────────────────────
+function renderVaultEntries() {
+  const list = document.getElementById('vault-entries-list');
+  list.innerHTML = '';
+  if (state.vaultNotes.length === 0) {
+    list.innerHTML = '<div class="empty-state" style="padding:32px 16px;"><p style="font-size:13px;">No journal entries yet. Write your first one above.</p></div>';
+    return;
+  }
+  state.vaultNotes.forEach(note => {
+    const entry = document.createElement('div');
+    entry.style.cssText = 'padding:12px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);margin-bottom:8px;';
+    entry.innerHTML = `<div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px;">${formatDate(note.date)}</div><p style="font-size:13px;line-height:1.6;color:var(--text);">${note.text}</p>`;
+    list.appendChild(entry);
+  });
+}
+
+async function saveVaultNote() {
+  if (!state.user) { showToast('⚠ Please sign in first'); return; }
+  const text = document.getElementById('vault-main-text').value.trim();
+  if (!text) { showToast('⚠ Write something first'); return; }
+  try {
+    await withRetry(() => firestoreDb.collection('vaultNotes').add({
+      userId: state.user.id,
+      text,
+      date: new Date().toISOString().split('T')[0],
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }));
+    await loadVaultNotes();
+    renderVaultEntries();
+    document.getElementById('vault-main-text').value = '';
+    showToast('✓ Journal entry saved!');
+  } catch(e) { showToast('⚠ Failed to save: ' + e.message); }
+}
+
+function clearVault() { document.getElementById('vault-main-text').value = ''; }
+
+// ── TOAST ────────────────────────────────────────────────────────
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.style.opacity = '1'; toast.style.transform = 'translateY(0)';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity='0'; toast.style.transform='translateY(10px)'; }, 3500);
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  ensureFirebase();
+  lucide.createIcons();
+  renderDashboard();
+  updateGuardian();
+  updateAuthUI();
+  firebase.auth().onAuthStateChanged(async user => {
+    if (user) {
+      state.user = { id: user.uid, email: user.email };
+      updateAuthUI();
+      showToast('✓ Signed in as ' + user.email);
+      await refreshAll();
+    } else {
+      state.user = null;
+      state.trades = [];
+      state.vaultNotes = [];
+      updateAuthUI();
+      renderDashboard();
+    }
+  });
+});
+  </script>
   </body>
 </html>
-
