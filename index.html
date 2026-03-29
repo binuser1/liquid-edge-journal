@@ -921,24 +921,30 @@ function formatDate(dateStr) {
 document.addEventListener('DOMContentLoaded', () => {
   ensureFirebase();
   lucide.createIcons();
-  renderDashboard();
   updateGuardian();
   updateAuthUI();
+  setDashboardLoading(true);
   firebase.auth().onAuthStateChanged(async user => {
     if (user) {
       state.user = { id: user.uid, email: user.email };
       updateAuthUI();
-      showToast('✓ Signed in as ' + user.email);
       await refreshAll();
+      showToast('✓ Signed in as ' + user.email);
     } else {
       state.user = null;
       state.trades = [];
       state.vaultNotes = [];
       updateAuthUI();
+      setDashboardLoading(false);
       renderDashboard();
     }
   });
 });
+
+function setDashboardLoading(on) {
+  const ids = ['stat-winrate','stat-trades','stat-pnl','stat-streak','donut-pct'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = on ? '…' : ''; });
+}
   </script>
   </body>
 </html>
