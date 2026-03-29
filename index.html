@@ -511,7 +511,7 @@ async function loadVaultNotes() {
       noteRows.push({ id: doc.id, date: d.date, text: d.text, _ts: d.createdAt ? d.createdAt.toMillis() : 0 });
     });
     state.vaultNotes = noteRows.sort((a, b) => b._ts - a._ts);
-  } catch(e) { showToast('⚠ Failed to load journal entries'); }
+  } catch(e) { console.warn('loadVaultNotes:', e.message); }
 }
 
 async function refreshAll() {
