@@ -475,12 +475,12 @@ async function loadTrades() {
   if (!state.user || !firestoreDb) return;
   try {
     const snap = await withRetry(() =>
-      firestoreDb.collection('trades').where('userId','==',state.user.id).orderBy('createdAt','desc').get()
+      firestoreDb.collection('trades').where('userId','==',state.user.id).get()
     );
-    state.trades = [];
+    const rows = [];
     snap.forEach(doc => {
       const d = doc.data();
-      state.trades.push({
+      rows.push({
         id: doc.id,
         market: d.market || '',
         cat: d.category || 'Real',
@@ -491,9 +491,11 @@ async function loadTrades() {
         outcome: d.outcome || null,
         date: d.tradeDate || (d.createdAt ? new Date(d.createdAt.toMillis()).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
         notes: d.notes || '',
-        chartUrl: d.chartBase64 || null
+        chartUrl: d.chartBase64 || null,
+        _ts: d.createdAt ? d.createdAt.toMillis() : 0
       });
     });
+    state.trades = rows.sort((a, b) => b._ts - a._ts);
   } catch(e) { showToast('⚠ Failed to load trades: ' + e.message); }
 }
 
@@ -501,13 +503,14 @@ async function loadVaultNotes() {
   if (!state.user || !firestoreDb) return;
   try {
     const snap = await withRetry(() =>
-      firestoreDb.collection('vaultNotes').where('userId','==',state.user.id).orderBy('createdAt','desc').get()
+      firestoreDb.collection('vaultNotes').where('userId','==',state.user.id).get()
     );
-    state.vaultNotes = [];
+    const noteRows = [];
     snap.forEach(doc => {
       const d = doc.data();
-      state.vaultNotes.push({ id: doc.id, date: d.date, text: d.text });
+      noteRows.push({ id: doc.id, date: d.date, text: d.text, _ts: d.createdAt ? d.createdAt.toMillis() : 0 });
     });
+    state.vaultNotes = noteRows.sort((a, b) => b._ts - a._ts);
   } catch(e) { showToast('⚠ Failed to load journal entries'); }
 }
 
