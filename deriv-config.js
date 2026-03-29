@@ -26,20 +26,22 @@ window.DERIV_CONFIG = {
   },
   
   // OAuth callback URI. Must match exactly in Deriv app settings.
-  redirect_uri: 'https://liquid-edge-journal-hk3x.vercel.app/deriv-callback.html',
-  
-  // Available symbols
+  redirect_uri: 'https://liquid-edge.app/deriv-callback.html',
+
+  // Available symbols (Volatility Index only)
   symbols: {
-    'R_75': 'Volatility 75',
-    'R_100': 'Volatility 100',
-    'BOOM_1000': 'Boom 1000',
-    'BOOM_500': 'Boom 500',
-    'BOOM_300': 'Boom 300',
-    'CRASH_1000': 'Crash 1000',
-    'CRASH_500': 'Crash 500',
-    'CRASH_300': 'Crash 300',
-    'R_10': 'Volatility 10',
-    'R_25': 'Volatility 25',
-    'R_50': 'Volatility 50'
+    'R_10':   'Volatility 10 Index',
+    '1HZ10V': 'Volatility 10 (1s) Index',
+    '1HZ15V': 'Volatility 15 (1s) Index',
+    'R_25':   'Volatility 25 Index',
+    '1HZ25V': 'Volatility 25 (1s) Index',
+    '1HZ30V': 'Volatility 30 (1s) Index',
+    'R_50':   'Volatility 50 Index',
+    '1HZ50V': 'Volatility 50 (1s) Index',
+    'R_75':   'Volatility 75 Index',
+    '1HZ75V': 'Volatility 75 (1s) Index',
+    '1HZ90V': 'Volatility 90 (1s) Index',
+    'R_100':  'Volatility 100 Index',
+    '1HZ100V':'Volatility 100 (1s) Index'
   }
 };
